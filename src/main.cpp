@@ -1,7 +1,7 @@
 #include <WiFi.h>
 #define null -999
 const char* ssid     = "wifi";
-const char* password = "pasiwode";
+const char* password = "23332333qwq";
 
 class Waterdrop_sensor
 {
