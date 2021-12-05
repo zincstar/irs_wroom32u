@@ -177,6 +177,8 @@ class Led
         {
             //code: interact with led pins
             analogWrite(25,128);
+            analogWrite(26,128);
+            analogWrite(27,128);
         }
         void set_all(Led_color sta)
         {
@@ -196,6 +198,8 @@ void setup()
     Serial.begin(9600);
     pinMode(13,INPUT);
     pinMode(25,OUTPUT);//led
+    pinMode(26,OUTPUT);//led
+    pinMode(27,OUTPUT);//led
     delay(10);
     //Wifi_Connect();
 }
