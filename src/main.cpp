@@ -46,17 +46,17 @@ void analogWrite(int pin, uint8_t val)
 
 class Waterdrop_sensor
 {
-public:
-    int status, quantity;
-    Waterdrop_sensor()
-    {
-        this->status = 0;
-        this->quantity = 0;
-    }
-    void get()
-    {
-        this->quantity = (4095 - analogRead(13)) / 10;
-    }
+    public:
+        int status,quantity;
+        Waterdrop_sensor()
+        {
+            this->status=0;
+            this->quantity=0;
+        }
+        void get()
+        {
+            this->quantity=(4095-analogRead(33))/10;
+        }
 };
 
 DHT_Unified dht(32, DHT11);
@@ -260,6 +260,7 @@ void Wifi_Check()
 void setup()
 {
     Serial.begin(9600);
+<<<<<<< HEAD
     pinMode(13, INPUT);
     pinMode(25, OUTPUT); //led
     pinMode(26, OUTPUT); //led
@@ -269,6 +270,12 @@ void setup()
     dht.temperature().getSensor(&sensor);
     dht.humidity().getSensor(&sensor);
     delayMS = sensor.min_delay / 1000;
+=======
+    pinMode(33,INPUT);
+    pinMode(25,OUTPUT);//led
+    pinMode(26,OUTPUT);//led
+    pinMode(27,OUTPUT);//led
+>>>>>>> 9d29a8ee65b99bd1350a4abc93161a2c18f9fdd4
     delay(10);
     led.set_all(WiFi_disconnect_col);
     Wifi_Connect();
