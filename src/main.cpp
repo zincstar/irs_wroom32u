@@ -260,7 +260,7 @@ void Wifi_Check()
 void setup()
 {
     Serial.begin(9600);
-    pinMode(33,INPUT);
+    pinMode(33,INPUT);//rain
     pinMode(25,OUTPUT);//led
     pinMode(26,OUTPUT);//led
     pinMode(27,OUTPUT);//led
