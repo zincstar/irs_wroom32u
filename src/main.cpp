@@ -260,22 +260,15 @@ void Wifi_Check()
 void setup()
 {
     Serial.begin(9600);
-<<<<<<< HEAD
-    pinMode(13, INPUT);
-    pinMode(25, OUTPUT); //led
-    pinMode(26, OUTPUT); //led
-    pinMode(27, OUTPUT); //led
+    pinMode(33,INPUT);
+    pinMode(25,OUTPUT);//led
+    pinMode(26,OUTPUT);//led
+    pinMode(27,OUTPUT);//led
     dht.begin();
     sensor_t sensor;
     dht.temperature().getSensor(&sensor);
     dht.humidity().getSensor(&sensor);
     delayMS = sensor.min_delay / 1000;
-=======
-    pinMode(33,INPUT);
-    pinMode(25,OUTPUT);//led
-    pinMode(26,OUTPUT);//led
-    pinMode(27,OUTPUT);//led
->>>>>>> 9d29a8ee65b99bd1350a4abc93161a2c18f9fdd4
     delay(10);
     led.set_all(WiFi_disconnect_col);
     Wifi_Connect();
