@@ -3,6 +3,8 @@
 const char* ssid     = "wifi";
 const char* password = "23332333qwq";
 
+class Led;
+
 #define PWM_FREQ 32000
 #define PWM_RESOLUTION 8
 int _adc = 0;
@@ -50,7 +52,7 @@ class Waterdrop_sensor
         }
         void get()
         {
-            this->quantity=analogRead(13);
+            this->quantity=(4095-analogRead(13))/10;
         }
 };
 
@@ -85,18 +87,6 @@ class Pressure_sensor
         }
 
 };
-
-void Wifi_Connect()
-{
-    Serial.printf("\n\nConnecting to %s",ssid);
-    WiFi.begin(ssid, password);
-    while (WiFi.status() != WL_CONNECTED) {
-        delay(500);
-        Serial.print(".");
-    }
-    Serial.printf("\nWiFi connected\nIP address: ");
-    Serial.println(WiFi.localIP());
-}
 
 class Weather
 {
@@ -152,17 +142,19 @@ class Motor
         }
 };
 
-const int led_num=3;
+const int led_num=1;
 struct Led_color
 {
     int r,g,b;
-    Led_color()
+    Led_color(int rr=0,int gg=0,int bb=0)
     {
-        this->r=0;
-        this->g=0;
-        this->b=0;
+        this->r=rr;
+        this->g=gg;
+        this->b=bb;
     }
 };
+
+const Led_color WiFi_disconnect_col=Led_color(255,0,0),WiFi_connect_col=Led_color(0,255,0);
 
 class Led
 {
@@ -176,13 +168,14 @@ class Led
         void set()
         {
             //code: interact with led pins
-            analogWrite(25,128);
-            analogWrite(26,128);
-            analogWrite(27,128);
+            analogWrite(25,this->status[0].b);//blue
+            analogWrite(26,this->status[0].r);//red
+            analogWrite(27,this->status[0].g);//green
         }
         void set_all(Led_color sta)
         {
             for(int i=0;i<led_num;++i) this->status[i]=sta;
+            this->set();
         }
 };
 
@@ -193,6 +186,45 @@ Weather weather;
 Motor motor;
 Led led;
 
+void Wifi_Connect()
+{
+    Serial.printf("\n\nConnecting to %s",ssid);
+    WiFi.begin(ssid, password);
+    while (WiFi.status() != WL_CONNECTED) {
+        delay(500);
+        Serial.print(".");
+    }
+    led.set_all(WiFi_connect_col);
+    Serial.printf("\nWiFi connected\nIP address: ");
+    Serial.println(WiFi.localIP());
+}
+
+const int Connect_Try_Times=3,Waiting_Times=20;
+void Wifi_Check()
+{
+    if (WiFi.status() != WL_CONNECTED) {
+        led.set_all(WiFi_disconnect_col);
+        Serial.printf("WiFi Connection Lost!\n");
+        for (int i = 0;i < Connect_Try_Times;i++){
+            WiFi.disconnect();
+            WiFi.begin(ssid, password);
+            for (int j = 0;j < Waiting_Times;j++) {
+                if (WiFi.status() != WL_CONNECTED) {
+                    delay(500);
+                    Serial.print(".");
+                }
+                else break;
+            }
+            if(WiFi.status() == WL_CONNECTED){
+                Serial.printf("Reconnect Successfully!\n");
+                led.set_all(WiFi_connect_col);
+                return;
+            }
+            Serial.printf("Reconnect Tring Times: %d\n",i+1);
+        }
+    }
+}
+
 void setup()
 {
     Serial.begin(9600);
@@ -201,7 +233,8 @@ void setup()
     pinMode(26,OUTPUT);//led
     pinMode(27,OUTPUT);//led
     delay(10);
-    //Wifi_Connect();
+    led.set_all(WiFi_disconnect_col);
+    Wifi_Connect();
 }
 
 void loop()
@@ -245,8 +278,9 @@ void loop()
         Serial.print(line);
     }
     */
-   led.set();
-   waterdrop_sensor.get();
-    printf("water: %d\n",waterdrop_sensor.quantity);
-    delay(5000);
+    Wifi_Check();
+    led.set();
+    waterdrop_sensor.get();
+    printf("water: %d\n",(waterdrop_sensor.quantity));
+    delay(1000);
 }
