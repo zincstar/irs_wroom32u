@@ -1,3 +1,5 @@
+#include <HTTPClient.h>
+#include <ArduinoJson.h>
 #include <Adafruit_Sensor.h>
 #include <DHT.h>
 #include <DHT_U.h>
@@ -50,8 +52,8 @@ class Waterdrop_sensor
         int status,quantity;
         Waterdrop_sensor()
         {
-            this->status=0;
-            this->quantity=0;
+            this->status=null;
+            this->quantity=null;
         }
         void get()
         {
