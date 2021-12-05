@@ -3,6 +3,42 @@
 const char* ssid     = "wifi";
 const char* password = "23332333qwq";
 
+#define PWM_FREQ 32000
+#define PWM_RESOLUTION 8
+int _adc = 0;
+int ADC_MAP[48] = {
+    -1, -1, -1, -1, -1, -1, -1, -1,
+    -1, -1, -1, -1, -1, -1, -1, -1,
+    -1, -1, -1, -1, -1, -1, -1, -1,
+    -1, -1, -1, -1, -1, -1, -1, -1,
+    -1, -1, -1, -1, -1, -1, -1, -1,
+    -1, -1, -1, -1, -1, -1, -1, -1};
+void setupPWM(int pin)
+{
+    pinMode(pin, OUTPUT);
+#ifdef USE_SIGMADELTA
+    sigmaDeltaSetup(_adc, PWM_FREQ);
+    sigmaDeltaAttachPin(pin, _adc);
+#else
+    ledcSetup(_adc, PWM_FREQ, PWM_RESOLUTION);
+    ledcAttachPin(pin, _adc);
+#endif
+    ADC_MAP[pin] = _adc;
+
+    _adc = _adc + 1;
+}
+
+void analogWrite(int pin, uint8_t val)
+{
+    if (ADC_MAP[pin] == -1)
+        setupPWM(pin);
+#ifndef USE_SIGMADELTA
+    ledcWrite(ADC_MAP[pin], val);
+#else
+    sigmaDeltaWrite(ADC_MAP[pin], val);
+#endif
+}
+
 class Waterdrop_sensor
 {
     public:
@@ -140,6 +176,7 @@ class Led
         void set()
         {
             //code: interact with led pins
+            analogWrite(25,128);
         }
         void set_all(Led_color sta)
         {
@@ -158,6 +195,7 @@ void setup()
 {
     Serial.begin(9600);
     pinMode(13,INPUT);
+    pinMode(25,OUTPUT);//led
     delay(10);
     //Wifi_Connect();
 }
@@ -203,7 +241,8 @@ void loop()
         Serial.print(line);
     }
     */
-    waterdrop_sensor.get();
+   led.set();
+   waterdrop_sensor.get();
     printf("water: %d\n",waterdrop_sensor.quantity);
     delay(5000);
 }
