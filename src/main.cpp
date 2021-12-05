@@ -52,7 +52,7 @@ class Waterdrop_sensor
         }
         void get()
         {
-            this->quantity=(4095-analogRead(13))/10;
+            this->quantity=(4095-analogRead(33))/10;
         }
 };
 
@@ -228,7 +228,7 @@ void Wifi_Check()
 void setup()
 {
     Serial.begin(9600);
-    pinMode(13,INPUT);
+    pinMode(33,INPUT);
     pinMode(25,OUTPUT);//led
     pinMode(26,OUTPUT);//led
     pinMode(27,OUTPUT);//led
