@@ -3,6 +3,21 @@
 const char* ssid     = "wifi";
 const char* password = "pasiwode";
 
+class Waterdrop_sensor
+{
+    public:
+        int status,quantity;
+        Waterdrop_sensor()
+        {
+            this->status=0;
+            this->quantity=0;
+        }
+        void get()
+        {
+
+        }
+}
+
 class Temperature_humidity_sensor
 {
 	public:
@@ -141,6 +156,7 @@ Led led;
 void setup()
 {
     Serial.begin(9600);
+    pinMode()
     delay(10);
     Wifi_Connect();
 }
