@@ -14,9 +14,9 @@ class Waterdrop_sensor
         }
         void get()
         {
-
+            this->quantity=analogRead(13);
         }
-}
+};
 
 class Temperature_humidity_sensor
 {
@@ -147,6 +147,7 @@ class Led
         }
 };
 
+Waterdrop_sensor waterdrop_sensor;
 Temperature_humidity_sensor temperatrue_humidity_sensor;
 Pressure_sensor pressure_sensor;
 Weather weather;
@@ -156,9 +157,9 @@ Led led;
 void setup()
 {
     Serial.begin(9600);
-    pinMode()
+    pinMode(13,INPUT);
     delay(10);
-    Wifi_Connect();
+    //Wifi_Connect();
 }
 
 void loop()
@@ -202,6 +203,7 @@ void loop()
         Serial.print(line);
     }
     */
-
+   waterdrop_sensor.get();
+    printf("water: %d\n",waterdrop_sensor.quantity);
     delay(5000);
 }
