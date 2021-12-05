@@ -1,3 +1,4 @@
+#include<HardwareSerial.h>
 #include <WiFi.h>
 #define null -999
 const char* ssid     = "wifi";
@@ -68,7 +69,52 @@ class Temperature_humidity_sensor
 			this->t=10;
 			this->h=20;
 			//turn to the real values after we get the hardware
-		}
+            static void InputInitial(void) //设置端口为输入
+            {
+                gpio_pad_select_gpio(DHT11_PIN);
+                gpio_set_direction(DHT11_PIN, GPIO_MODE_INPUT);
+            }
+
+            static void OutputHigh(void) //输出 1
+            {
+                gpio_pad_select_gpio(DHT11_PIN);
+                gpio_set_direction(DHT11_PIN, GPIO_MODE_OUTPUT);
+                gpio_set_level(DHT11_PIN, 1);
+            }
+
+            static void OutputLow(void) //输出 0
+            {
+                gpio_pad_select_gpio(DHT11_PIN);
+                gpio_set_direction(DHT11_PIN, GPIO_MODE_OUTPUT);
+                gpio_set_level(DHT11_PIN, 0);
+            }
+            //位数据 0 和位数据 1 的区别是：数据 1 的高电平时间比数据 0 的时间长，根据这个特 点，读取一个字节的代码如下：
+
+                //读取一个字节数据
+                static void COM(void) // 温湿写入
+            {
+                int i;
+                for (i = 0; i < 8; i++)
+                {
+                    int FLAG = 2;
+
+                    //等待 IO 口变低，变低后，通过延时去判断是 0 还是 1 
+                    while((getData()==0)&&FLAG++) ets_delay_us(10); 
+                    ets_delay_us(35);//延时 35us
+                    int temp = 0;
+
+                    //如果这个位是 1，35us 后，还是 1，否则为 0 
+                    if(getData()==1)  temp=1;
+                    FLAG=2;
+
+                    //等待 IO 口变高，变高后，表示可以读取下一位 
+                    while((getData()==1)&&FLAG++) ets_delay_us(10); 
+                    if(FLAG==1) break;
+                    comdata <<= 1;
+                    comdata |= temp;
+                }
+            }
+        }
 };
 
 class Pressure_sensor
