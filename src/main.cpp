@@ -265,7 +265,7 @@ void Wifi_Check()
     }
 }
 
-const int api_loop_times=20;
+const int api_loop_times=0;
 int api_request_counter=api_loop_times;
 void get_weather_api()
 {
