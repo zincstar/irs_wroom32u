@@ -4,9 +4,14 @@
 #include <DHT.h>
 #include <DHT_U.h>
 #include <WiFi.h>
+#include "WeatherNow.h"
 #define null -999
 const char *ssid = "wifi";
 const char *password = "23332333qwq";
+
+const char* reqUserKey = "SuzImoB5Dv06BZmNU";   // 心知天气api私钥
+const char* reqLocation = "beijing";            // 城市，可使用"ip"自动识别请求 IP 地址
+const char* reqUnit = "c";                      // 摄氏(c)/华氏(f)
 
 class Led;
 
@@ -209,6 +214,7 @@ public:
 Waterdrop_sensor waterdrop_sensor;
 Temperature_humidity_sensor temperatrue_humidity_sensor;
 Pressure_sensor pressure_sensor;
+WeatherNow weatherNow;
 Weather weather;
 Motor motor;
 Led led;
@@ -259,6 +265,29 @@ void Wifi_Check()
     }
 }
 
+const int api_loop_times=20;
+int api_request_counter=api_loop_times;
+void get_weather_api()
+{
+    api_request_counter--;
+    if(WiFi.status() == WL_CONNECTED && api_request_counter <= 0)
+    {
+        //request from the api
+        api_request_counter=api_loop_times;
+        if(weatherNow.update())
+        {
+            Serial.print(weatherNow.getWeatherText());  // 获取当前天气（字符串格式）
+            Serial.println(weatherNow.getWeatherCode());// 获取当前天气（整数格式）
+            Serial.println(weatherNow.getDegree());     // 获取当前温度数值
+        }
+        else
+        {
+            Serial.printf("Request from api failed...\nServer Response: ");
+            Serial.println(weatherNow.getServerCode());
+        }
+    }
+}
+
 void setup()
 {
     Serial.begin(9600);
@@ -274,6 +303,7 @@ void setup()
     delay(10);
     led.set_all(WiFi_disconnect_col);
     Wifi_Connect();
+    weatherNow.config(reqUserKey, reqLocation, reqUnit);
 }
 
 void loop()
