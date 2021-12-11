@@ -1,11 +1,12 @@
-#include <HTTPClient.h>
-#include <ArduinoJson.h>
 #include <Adafruit_Sensor.h>
 #include <DHT.h>
 #include <DHT_U.h>
+#include <MS5xxx.h>
 #include <WiFi.h>
-#include <WebServer.h>
+#include <HTTPClient.h>
+#include <ArduinoJson.h>
 #include "WeatherNow.h"
+#include <WebServer.h>
 #define null -999
 const char *ssid = "wifi";                      // Wifi name
 const char *password = "23332333qwq";           // Wifi password
@@ -14,8 +15,6 @@ const char* reqLocation = "beijing";            // 城市，可使用"ip"自动�
 const char* reqUnit = "c";                      // 摄氏(c)/华氏(f)
 
 WiFiServer server(80);
-
-class Led;
 
 #define PWM_FREQ 32000
 #define PWM_RESOLUTION 8
@@ -59,6 +58,7 @@ class Waterdrop_sensor
         int status,quantity;
         Waterdrop_sensor()
         {
+            pinMode(33,INPUT);//rain
             this->status=null;
             this->quantity=null;
         }
@@ -69,13 +69,16 @@ class Waterdrop_sensor
 };
 
 DHT_Unified dht(32, DHT11);
-uint32_t delayMS;
 class Temperature_humidity_sensor
 {
 public:
     float t, h;
     Temperature_humidity_sensor()
     {
+        dht.begin();
+        sensor_t sensor;
+        dht.temperature().getSensor(&sensor);
+        dht.humidity().getSensor(&sensor);
         this->t = -999;
         this->h = -999;
     }
@@ -86,7 +89,7 @@ public:
         dht.temperature().getEvent(&event);
         if (isnan(event.temperature))
         {
-            Serial.println(F("Error reading temperature!"));
+            Serial.println("Error reading temperature!");
         }
         else
         {
@@ -96,7 +99,7 @@ public:
         dht.humidity().getEvent(&event);
         if (isnan(event.relative_humidity))
         {
-            Serial.println(F("Error reading humidity!"));
+            Serial.println("Error reading humidity!");
         }
         else
         {
@@ -105,17 +108,20 @@ public:
     }
 };
 
+MS5xxx ms5611(&Wire);   // 0x76 = CSB to VCC; 0x77 = CSB to GND
 class Pressure_sensor
 {
 public:
-    int pressure;
+    float pressure;
     Pressure_sensor()
     {
         this->pressure = null;
     }
     void get()
     {
-        this->pressure = 1001;
+        ms5611.ReadProm();
+        ms5611.Readout();
+        this->pressure = ms5611.GetPres();
     }
 };
 
@@ -197,6 +203,9 @@ public:
     Led_color status[led_num];
     Led()
     {
+        pinMode(25,OUTPUT);
+        pinMode(26,OUTPUT);
+        pinMode(27,OUTPUT);
     }
     void set()
     {
@@ -293,28 +302,60 @@ void get_weather_api()
 void setup()
 {
     Serial.begin(9600);
-    pinMode(33,INPUT);//rain
-    pinMode(25,OUTPUT);//led
-    pinMode(26,OUTPUT);//led
-    pinMode(27,OUTPUT);//led
-    dht.begin();
-    sensor_t sensor;
-    dht.temperature().getSensor(&sensor);
-    dht.humidity().getSensor(&sensor);
-    delayMS = sensor.min_delay / 1000;
     delay(10);
     led.set_all(WiFi_disconnect_col);
-    Wifi_Connect();
+    //Wifi_Connect();
     weatherNow.config(reqUserKey, reqLocation, reqUnit);
 }
 
 void loop()
 {
-    delay(delayMS);
     temperatrue_humidity_sensor.get();
     printf("t: %f\n h: %f\n", temperatrue_humidity_sensor.t, temperatrue_humidity_sensor.h);
-get_weather_api();
-    //tcp example:
+    pressure_sensor.get();
+    printf("pr: %f\n",pressure_sensor.pressure);
+    //get_weather_api();
+    //Wifi_Check();
+    led.set();
+    waterdrop_sensor.get();
+    printf("water: %d\n", (waterdrop_sensor.quantity));
+    delay(1000);
+    
+    //test if i2c connected
+    byte error, address;
+  int nDevices;
+  Serial.println("Scanning...");
+  nDevices = 0;
+  for(address = 1; address < 127; address++ ) {
+    Wire.beginTransmission(address);
+    error = Wire.endTransmission();
+    if (error == 0) {
+      Serial.print("I2C device found at address 0x");
+      if (address<16) {
+        Serial.print("0");
+      }
+      Serial.println(address,HEX);
+      nDevices++;
+    }
+    else if (error==4) {
+      Serial.print("Unknow error at address 0x");
+      if (address<16) {
+        Serial.print("0");
+      }
+      Serial.println(address,HEX);
+    }    
+  }
+  if (nDevices == 0) {
+    Serial.println("No I2C devices found\n");
+  }
+  else {
+    Serial.println("done\n");
+  }
+
+  delay(5000);    
+}
+
+//tcp example:
     /*
     const char* host = "www.baidu.com";
     Serial.print("connecting to ");
@@ -353,14 +394,8 @@ get_weather_api();
         Serial.print(line);
     }
     */
-    Wifi_Check();
-    led.set();
-    waterdrop_sensor.get();
-    printf("water: %d\n", (waterdrop_sensor.quantity));
-    delay(1000);
-}
 
-/*
+   /*
 void InputInitial(void) //设置端口为输入
         {
             gpio_pad_select_gpio(DHT11_PIN);
