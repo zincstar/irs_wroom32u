@@ -310,8 +310,8 @@ void loop()
 {
     delay(delayMS);
     temperatrue_humidity_sensor.get();
-    printf("t: %f\n h: %f", temperatrue_humidity_sensor.t, temperatrue_humidity_sensor.h);
-
+    printf("t: %f\n h: %f\n", temperatrue_humidity_sensor.t, temperatrue_humidity_sensor.h);
+get_weather_api();
     //tcp example:
     /*
     const char* host = "www.baidu.com";
