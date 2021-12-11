@@ -13,6 +13,7 @@ const char *password = "23332333qwq";           // Wifi password
 const char* reqUserKey = "SuzImoB5Dv06BZmNU";   // 心知天气api私钥
 const char* reqLocation = "beijing";            // 城市，可使用"ip"自动识别请求 IP 地址
 const char* reqUnit = "c";                      // 摄氏(c)/华氏(f)
+String LEDState1="on";                               // LED灯的开关状态
 
 WiFiServer server(80);
 
@@ -194,7 +195,9 @@ struct Led_color
     }
 };
 
-const Led_color WiFi_disconnect_col = Led_color(255, 0, 0), WiFi_connect_col = Led_color(0, 255, 0);
+const Led_color WiFi_disconnect_col = Led_color(255, 0, 0);
+const Led_color WiFi_connect_col = Led_color(0, 255, 0);
+const Led_color LED_Off = Led_color(255,255,255);
 
 class Led
 {
@@ -210,6 +213,8 @@ public:
     void set()
     {
         //code: interact with led pins
+        printf("set_led_col:%d %d %d\n",status[0].b,status[0].r,status[0].g);
+        if(LEDState1=="off")return;
         analogWrite(25, this->status[0].b); //blue
         analogWrite(26, this->status[0].r); //red
         analogWrite(27, this->status[0].g); //green
@@ -300,25 +305,91 @@ void get_weather_api()
 }
 
 String header;
-String outputState1="off";
-String outputState2="off";
-const int output1=26;
-const int output2=27;
 unsigned long current_Time=millis();
 unsigned long previous_Time=0;
 const long timeout_Time=2000;
 void Web_Server_Monitor()
 {
+    /*
+    Bug:We cannot turn on/off(the same action) the LED in a short time(5 seconds or so)
+    Reason:when you creat a new client, it count the times of commands in header.However, 
+    the currentLine was not cleared when an old client still listening.
+    Result:solved by clear header once check out an available get line.
+    */
     WiFiClient client = server.available();
     if(!client.connected())
     {
+        header="";
+        client.stop();
         previous_Time=current_Time=millis();
         Serial.println("New Client.");
         String currentLine = "";
     }
     if(client.connected())
     {
-        
+        Serial.println("Client Connected!!!");
+        current_Time=previous_Time=millis();
+        while (client.connected() && current_Time - previous_Time <= timeout_Time)
+        {
+            String currentLine = "";
+            current_Time = millis();
+            if (client.available()) 
+            {
+                char c = client.read();
+                Serial.write(c);
+                header += c;
+                if (c == '\n') 
+                {
+                    if (currentLine.length() == 0) 
+                    {
+                        client.println("HTTP/1.1 200 OK");
+                        client.println("Content-type:text/html");
+                        client.println("Connection: close");
+                        client.println();
+
+                        if (header.indexOf("GET /1/on") >= 0) {
+                            Serial.println("LED_1 on");
+                            LEDState1 = "on";
+                            if(WiFi.status() != WL_CONNECTED) led.set_all(WiFi_disconnect_col);
+                            else led.set_all(WiFi_connect_col);
+                            header="";
+                        } 
+                        else if (header.indexOf("GET /1/off") >= 0) {
+                            Serial.println("LED_1 off");
+                            led.set_all(LED_Off);
+                            LEDState1 = "off";
+                            header="";
+                        }
+
+                        // Display the HTML web page
+                        client.println("<!DOCTYPE html><html>");
+                        client.println("<head><meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">");
+                        client.println("<link rel=\"icon\" href=\"data:,\">");
+                        client.println("<style>html { font-family: Helvetica; display: inline-block; margin: 0px auto; text-align: center;}");
+                        client.println(".button { background-color: #4CAF50; border: none; color: white; padding: 16px 40px;");
+                        client.println("text-decoration: none; font-size: 30px; margin: 2px; cursor: pointer;}");
+                        client.println(".button2 {background-color: #555555;}</style></head>");
+                        
+                        client.println("<body><h1>ESP32 Web Server</h1>");
+                        
+                        // Display current state, and ON/OFF buttons for GPIO 26  
+                        client.println("<p>LED_1 - State " + LEDState1 + "</p>");
+                        // If the LEDState1 is off, it displays the ON button       
+                        if(LEDState1=="off")client.println("<p><a href=\"/1/on\"><button class=\"button\">ON</button></a></p>");
+                        else client.println("<p><a href=\"/1/off\"><button class=\"button button2\">OFF</button></a></p>");
+                        
+                        client.println("</body></html>");
+                        
+                        // The HTTP response ends with another blank line
+                        client.println();
+                        // Break out of the while loop
+                        break;
+                    }
+                    else currentLine = "";
+                } 
+                else if (c != '\r') currentLine += c;
+            }
+        }
     }
 }
 
@@ -350,38 +421,38 @@ void loop()
     delay(1000);
 
     //test if i2c connected
-/*
-    byte error, address;
-  int nDevices;
-  Serial.println("Scanning...");
-  nDevices = 0;
-  for(address = 1; address < 127; address++ ) {
-    Wire.beginTransmission(address);
-    error = Wire.endTransmission();
-    if (error == 0) {
-      Serial.print("I2C device found at address 0x");
-      if (address<16) {
-        Serial.print("0");
-      }
-      Serial.println(address,HEX);
-      nDevices++;
+    /*
+        byte error, address;
+    int nDevices;
+    Serial.println("Scanning...");
+    nDevices = 0;
+    for(address = 1; address < 127; address++ ) {
+        Wire.beginTransmission(address);
+        error = Wire.endTransmission();
+        if (error == 0) {
+        Serial.print("I2C device found at address 0x");
+        if (address<16) {
+            Serial.print("0");
+        }
+        Serial.println(address,HEX);
+        nDevices++;
+        }
+        else if (error==4) {
+        Serial.print("Unknow error at address 0x");
+        if (address<16) {
+            Serial.print("0");
+        }
+        Serial.println(address,HEX);
+        }    
     }
-    else if (error==4) {
-      Serial.print("Unknow error at address 0x");
-      if (address<16) {
-        Serial.print("0");
-      }
-      Serial.println(address,HEX);
-    }    
-  }
-  if (nDevices == 0) {
-    Serial.println("No I2C devices found\n");
-  }
-  else {
-    Serial.println("done\n");
-  }
-*/
-  delay(5000);    
+    if (nDevices == 0) {
+        Serial.println("No I2C devices found\n");
+    }
+    else {
+        Serial.println("done\n");
+    }
+    */
+    delay(5000);    
 }
 
 //tcp example:
