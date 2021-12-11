@@ -299,12 +299,36 @@ void get_weather_api()
     }
 }
 
+String header;
+String outputState1="off";
+String outputState2="off";
+const int output1=26;
+const int output2=27;
+unsigned long current_Time=millis();
+unsigned long previous_Time=0;
+const long timeout_Time=2000;
+void Web_Server_Monitor()
+{
+    WiFiClient client = server.available();
+    if(!client.connected())
+    {
+        previous_Time=current_Time=millis();
+        Serial.println("New Client.");
+        String currentLine = "";
+    }
+    if(client.connected())
+    {
+        
+    }
+}
+
 void setup()
 {
     Serial.begin(9600);
     delay(10);
     led.set_all(WiFi_disconnect_col);
-    //Wifi_Connect();
+    Wifi_Connect();
+    server.begin();
     weatherNow.config(reqUserKey, reqLocation, reqUnit);
 }
 
@@ -314,14 +338,19 @@ void loop()
     printf("t: %f\n h: %f\n", temperatrue_humidity_sensor.t, temperatrue_humidity_sensor.h);
     pressure_sensor.get();
     printf("pr: %f\n",pressure_sensor.pressure);
-    //get_weather_api();
-    //Wifi_Check();
+    Wifi_Check();
+    if(WiFi.status() == WL_CONNECTED)
+    {
+        get_weather_api();
+        Web_Server_Monitor();
+    }
     led.set();
     waterdrop_sensor.get();
     printf("water: %d\n", (waterdrop_sensor.quantity));
     delay(1000);
-    
+
     //test if i2c connected
+/*
     byte error, address;
   int nDevices;
   Serial.println("Scanning...");
@@ -351,7 +380,7 @@ void loop()
   else {
     Serial.println("done\n");
   }
-
+*/
   delay(5000);    
 }
 
@@ -394,7 +423,6 @@ void loop()
         Serial.print(line);
     }
     */
-
    /*
 void InputInitial(void) //设置端口为输入
         {
