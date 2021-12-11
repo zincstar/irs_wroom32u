@@ -290,6 +290,29 @@ void get_weather_api()
     }
 }
 
+String header;
+String outputState1="off";
+String outputState2="off";
+const int output1=26;
+const int output2=27;
+unsigned long current_Time=millis();
+unsigned long previous_Time=0;
+const long timeout_Time=2000;
+void Web_Server_Monitor()
+{
+    WiFiClient client = server.available();
+    if(!client.connected())
+    {
+        previous_Time=current_Time=millis();
+        Serial.println("New Client.");
+        String currentLine = "";
+    }
+    if(client.connected())
+    {
+        
+    }
+}
+
 void setup()
 {
     Serial.begin(9600);
@@ -305,6 +328,7 @@ void setup()
     delay(10);
     led.set_all(WiFi_disconnect_col);
     Wifi_Connect();
+    server.begin();
     weatherNow.config(reqUserKey, reqLocation, reqUnit);
 }
 
@@ -313,7 +337,6 @@ void loop()
     delay(delayMS);
     temperatrue_humidity_sensor.get();
     printf("t: %f\n h: %f\n", temperatrue_humidity_sensor.t, temperatrue_humidity_sensor.h);
-get_weather_api();
     //tcp example:
     /*
     const char* host = "www.baidu.com";
@@ -354,6 +377,11 @@ get_weather_api();
     }
     */
     Wifi_Check();
+    if(WiFi.status() == WL_CONNECTED)
+    {
+        get_weather_api();
+        Web_Server_Monitor();
+    }
     led.set();
     waterdrop_sensor.get();
     printf("water: %d\n", (waterdrop_sensor.quantity));
