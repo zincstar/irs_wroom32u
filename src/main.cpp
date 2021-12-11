@@ -4,6 +4,7 @@
 #include <DHT.h>
 #include <DHT_U.h>
 #include <WiFi.h>
+#include <WebServer.h>
 #include "WeatherNow.h"
 #define null -999
 const char *ssid = "wifi";
