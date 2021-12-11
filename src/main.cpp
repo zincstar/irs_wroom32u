@@ -7,12 +7,13 @@
 #include <WebServer.h>
 #include "WeatherNow.h"
 #define null -999
-const char *ssid = "wifi";
-const char *password = "23332333qwq";
-
+const char *ssid = "wifi";                      // Wifi name
+const char *password = "23332333qwq";           // Wifi password
 const char* reqUserKey = "SuzImoB5Dv06BZmNU";   // 心知天气api私钥
 const char* reqLocation = "beijing";            // 城市，可使用"ip"自动识别请求 IP 地址
 const char* reqUnit = "c";                      // 摄氏(c)/华氏(f)
+
+WiFiServer server(80);
 
 class Led;
 
