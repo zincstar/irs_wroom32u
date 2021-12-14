@@ -318,7 +318,7 @@ void get_weather_api()
 String header;
 unsigned long current_Time=millis();
 unsigned long previous_Time=0;
-const long timeout_Time=2000;
+const long timeout_Time=30000;
 void Web_Server_Monitor()
 {
     /*
@@ -404,65 +404,87 @@ void Web_Server_Monitor()
     }
 }
 
-void setup()
+void Task1code(void *pvParameters)
 {
-    Serial.begin(9600);
-    delay(10);
+    for (;;)
+    {
+        temperatrue_humidity_sensor.get();
+        printf("t: %f\n h: %f\n", temperatrue_humidity_sensor.t, temperatrue_humidity_sensor.h);
+        pressure_sensor.get();
+        printf("pr: %f\n", pressure_sensor.pressure);
+        led.set();
+        waterdrop_sensor.get();
+        printf("water: %d\n", (waterdrop_sensor.quantity));
+        //test if i2c connected
+        byte error, address;
+        int nDevices;
+        Serial.println("Scanning...");
+        nDevices = 0;
+        for (address = 1; address < 127; address++)
+        {
+            Wire.beginTransmission(address);
+            error = Wire.endTransmission();
+            if (error == 0)
+            {
+                Serial.print("I2C device found at address 0x");
+                if (address < 16)
+                {
+                    Serial.print("0");
+                }
+                Serial.println(address, HEX);
+                nDevices++;
+            }
+            else if (error == 4)
+            {
+                Serial.print("Unknow error at address 0x");
+                if (address < 16)
+                {
+                    Serial.print("0");
+                }
+                Serial.println(address, HEX);
+            }
+        }
+        if (nDevices == 0)
+        {
+            Serial.println("No I2C devices found\n");
+        }
+        else
+        {
+            Serial.println("done\n");
+        }
+        delay(2500);
+    }
+}
+
+void Task2code(void *pvParameters)
+{
     led.set_all(WiFi_disconnect_col);
     Wifi_Connect();
     server.begin();
     weatherNow.config(reqUserKey, reqLocation, reqUnit);
+    for (;;)
+    {
+        Wifi_Check();
+        if (WiFi.status() == WL_CONNECTED)
+        {
+            get_weather_api();
+            Web_Server_Monitor();
+        }
+        delay(2500);
+    }
+}
+
+void setup()
+{
+    Serial.begin(9600);
+    delay(10);
+    xTaskCreatePinnedToCore(Task1code, "Task1", 10000, NULL, 1, NULL,  0); //mind the stackdepth!!!
+    xTaskCreatePinnedToCore(Task2code, "Task2", 10000, NULL, 1, NULL,  1);
+    
 }
 
 void loop()
 {
-    temperatrue_humidity_sensor.get();
-    printf("t: %f\n h: %f\n", temperatrue_humidity_sensor.t, temperatrue_humidity_sensor.h);
-    pressure_sensor.get();
-    printf("pr: %f\n",pressure_sensor.pressure);
-    Wifi_Check();
-    if(WiFi.status() == WL_CONNECTED)
-    {
-        get_weather_api();
-        Web_Server_Monitor();
-    }
-    led.set();
-    waterdrop_sensor.get();
-    printf("water: %d\n", (waterdrop_sensor.quantity));
-    delay(1000);
-
-    //test if i2c connected
-    
-        byte error, address;
-    int nDevices;
-    Serial.println("Scanning...");
-    nDevices = 0;
-    for(address = 1; address < 127; address++ ) {
-        Wire.beginTransmission(address);
-        error = Wire.endTransmission();
-        if (error == 0) {
-        Serial.print("I2C device found at address 0x");
-        if (address<16) {
-            Serial.print("0");
-        }
-        Serial.println(address,HEX);
-        nDevices++;
-        }
-        else if (error==4) {
-        Serial.print("Unknow error at address 0x");
-        if (address<16) {
-            Serial.print("0");
-        }
-        Serial.println(address,HEX);
-        }    
-    }
-    if (nDevices == 0) {
-        Serial.println("No I2C devices found\n");
-    }
-    else {
-        Serial.println("done\n");
-    }
-
     delay(5000);    
 }
 
