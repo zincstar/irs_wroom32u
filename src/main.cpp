@@ -1,7 +1,9 @@
 #include <Adafruit_Sensor.h>
 #include <DHT.h>
 #include <DHT_U.h>
-#include <MS5xxx.h>
+#include <Wire.h>
+#include <SPI.h>
+#include <Adafruit_BMP280.h>
 #include <WiFi.h>
 #include <HTTPClient.h>
 #include <ArduinoJson.h>
@@ -109,7 +111,10 @@ public:
     }
 };
 
-MS5xxx ms5611(&Wire);   // 0x76 = CSB to VCC; 0x77 = CSB to GND
+Adafruit_BMP280 bmp; // use I2C interface
+Adafruit_Sensor *bmp_temp = bmp.getTemperatureSensor();
+Adafruit_Sensor *bmp_pressure = bmp.getPressureSensor();
+// 0x76 = CSB to VCC; 0x77 = CSB to GND
 class Pressure_sensor
 {
 public:
@@ -120,9 +125,15 @@ public:
     }
     void get()
     {
-        ms5611.ReadProm();
-        ms5611.Readout();
-        this->pressure = ms5611.GetPres();
+        bmp.begin();
+        bmp.setSampling(Adafruit_BMP280::MODE_NORMAL,     /* Operating Mode. */
+                  Adafruit_BMP280::SAMPLING_X2,     /* Temp. oversampling */
+                  Adafruit_BMP280::SAMPLING_X16,    /* Pressure oversampling */
+                  Adafruit_BMP280::FILTER_X16,      /* Filtering. */
+                  Adafruit_BMP280::STANDBY_MS_500); /* Standby time. */
+        sensors_event_t pressure_event;
+        bmp_pressure->getEvent(&pressure_event);
+        this->pressure=pressure_event.pressure;//hPa
     }
 };
 
@@ -421,7 +432,7 @@ void loop()
     delay(1000);
 
     //test if i2c connected
-    /*
+    
         byte error, address;
     int nDevices;
     Serial.println("Scanning...");
@@ -451,7 +462,7 @@ void loop()
     else {
         Serial.println("done\n");
     }
-    */
+
     delay(5000);    
 }
 
