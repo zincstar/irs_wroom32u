@@ -17,6 +17,11 @@ const char* reqLocation = "beijing";            // 城市，可使用"ip"自动�
 const char* reqUnit = "c";                      // 摄氏(c)/华氏(f)
 String LEDState1="on";                               // LED灯的开关状态
 
+// IPAddress local_IP(192, 168, 200, 35);// Set your Static IP address
+// IPAddress gateway(192, 168, 200, 103);// Set your Gateway IP address
+// IPAddress subnet(255, 255, 255, 0);
+// IPAddress primaryDNS(192, 168, 1, 1);   //optional
+
 WiFiServer server(80);
 
 #define PWM_FREQ 32000
@@ -303,7 +308,7 @@ void get_weather_api()
         api_request_counter=api_loop_times;
         if(weatherNow.update())
         {
-            Serial.print(weatherNow.getWeatherText());  // 获取当前天气（字符串格式）
+            Serial.println(weatherNow.getWeatherText());  // 获取当前天气（字符串格式）
             Serial.println(weatherNow.getWeatherCode());// 获取当前天气（整数格式）
             Serial.println(weatherNow.getDegree());     // 获取当前温度数值
         }
@@ -475,6 +480,10 @@ void Task1code(void *pvParameters)
 void Task2code(void *pvParameters)
 {
     led.set_all(WiFi_disconnect_col);
+    // if (!WiFi.config(local_IP, gateway, subnet, primaryDNS))
+    // {
+    //     Serial.println("STA Failed to configure");
+    // }
     Wifi_Connect();
     server.begin();
     weatherNow.config(reqUserKey, reqLocation, reqUnit);
