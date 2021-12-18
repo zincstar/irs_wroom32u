@@ -4,6 +4,7 @@
 #include <Wire.h>
 #include <SPI.h>
 #include <Adafruit_BMP280.h>
+#include <Stepper.h>
 #include <WiFi.h>
 #include <HTTPClient.h>
 #include <ArduinoJson.h>
@@ -166,6 +167,8 @@ public:
     }
 };
 
+const int stepsPerRevolution = 2048;
+Stepper myStepper(stepsPerRevolution, 19, 5, 18, 17);
 class Motor
 {
 public:
@@ -174,6 +177,7 @@ public:
     {
         this->status = -1;
         //shrink the shed before it run!
+        myStepper.setSpeed(5);
     }
     void set(int sta)
     {
@@ -181,13 +185,19 @@ public:
             return;
         if (sta == 1)
         {
-            //code: interact with the motor
+            myStepper.step(stepsPerRevolution/4);
+            delay(2500);
+            myStepper.step(stepsPerRevolution/4);
+            delay(2500);
             this->status = 1;
             return;
         }
         if (sta == -1)
         {
-            //code: interact with the motor
+            myStepper.step(-stepsPerRevolution/4);
+            delay(2500);
+            myStepper.step(-stepsPerRevolution/4);
+            delay(2500);
             this->status = -1;
             return;
         }
@@ -452,6 +462,12 @@ void Task1code(void *pvParameters)
         {
             Serial.println("done\n");
         }
+        printf("\nstreching\n");
+        motor.set(1);
+        printf("\nstreched\n");
+        printf("\nshrinkinb\n");
+        motor.set(-1);
+        printf("\nshrunk\n");
         delay(2500);
     }
 }
@@ -478,7 +494,7 @@ void setup()
 {
     Serial.begin(9600);
     delay(10);
-    xTaskCreatePinnedToCore(Task1code, "Task1", 10000, NULL, 1, NULL,  0); //mind the stackdepth!!!
+    xTaskCreatePinnedToCore(Task1code, "Task1", 50000, NULL, 1, NULL,  0); //mind the stackdepth!!!
     xTaskCreatePinnedToCore(Task2code, "Task2", 10000, NULL, 1, NULL,  1);
     
 }
