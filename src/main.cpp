@@ -18,6 +18,11 @@ const char* reqLocation = "beijing";            // 城市，可使用"ip"自动�
 const char* reqUnit = "c";                      // 摄氏(c)/华氏(f)
 String LEDState1="on";                               // LED灯的开关状态
 
+// IPAddress local_IP(192, 168, 200, 35);// Set your Static IP address
+// IPAddress gateway(192, 168, 200, 103);// Set your Gateway IP address
+// IPAddress subnet(255, 255, 255, 0);
+// IPAddress primaryDNS(192, 168, 1, 1);   //optional
+
 WiFiServer server(80);
 
 #define PWM_FREQ 32000
@@ -234,7 +239,7 @@ public:
     void set()
     {
         //code: interact with led pins
-        printf("set_led_col:%d %d %d\n",status[0].b,status[0].r,status[0].g);
+        // printf("set_led_col:%d %d %d\n",status[0].b,status[0].r,status[0].g);
         if(LEDState1=="off")return;
         analogWrite(25, this->status[0].b); //blue
         analogWrite(26, this->status[0].r); //red
@@ -313,7 +318,7 @@ void get_weather_api()
         api_request_counter=api_loop_times;
         if(weatherNow.update())
         {
-            Serial.print(weatherNow.getWeatherText());  // 获取当前天气（字符串格式）
+            Serial.println(weatherNow.getWeatherText());  // 获取当前天气（字符串格式）
             Serial.println(weatherNow.getWeatherCode());// 获取当前天气（整数格式）
             Serial.println(weatherNow.getDegree());     // 获取当前温度数值
         }
@@ -384,12 +389,17 @@ void Web_Server_Monitor()
 
                         // Display the HTML web page
                         client.println("<!DOCTYPE html><html>");
-                        client.println("<head><meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">");
-                        client.println("<link rel=\"icon\" href=\"data:,\">");
+                        client.println("<head><meta charset=\"utf-8\" name=\"viewport\" content=\"width=device-width, initial-scale=1\">");
+                        client.println("<title>Web Server</title>");
+                        client.println("<link rel=\"icon\" href=\"https://www.buaa.edu.cn/favicon.ico\">");
                         client.println("<style>html { font-family: Helvetica; display: inline-block; margin: 0px auto; text-align: center;}");
                         client.println(".button { background-color: #4CAF50; border: none; color: white; padding: 16px 40px;");
                         client.println("text-decoration: none; font-size: 30px; margin: 2px; cursor: pointer;}");
-                        client.println(".button2 {background-color: #555555;}</style></head>");
+                        client.println(".button2 {background-color: #555555;}</style>");
+                        client.println("<style type=\"text/css\">");
+                        client.println("th.titfont{font-size: 22px;font-weight: bold;color: #255e95;background-color:#e9faff;}");
+                        client.println("td.cellfont1{font-size: 18px;background:#f2fbfe;}");
+                        client.println("td.cellfont2{font-size: 18px;background:#fffaaa;}</style></head>");
                         
                         client.println("<body><h1>ESP32 Web Server</h1>");
                         
@@ -399,6 +409,17 @@ void Web_Server_Monitor()
                         if(LEDState1=="off")client.println("<p><a href=\"/1/on\"><button class=\"button\">ON</button></a></p>");
                         else client.println("<p><a href=\"/1/off\"><button class=\"button button2\">OFF</button></a></p>");
                         
+                        client.println("<table width=\"100%\" border=\"0\" cellspacing=\"1\" cellpadding=\"4\" bgcolor=\"#cccccc\" align=\"center\">");
+                        client.println("<caption><font size=\"7\">Monitor Status</font></caption>");
+                        client.println("<caption>Last update time:" + (String)((current_Time - previous_Time)/1000) + " second(s) ago</caption>");
+                        client.println("<tr><th class=\"titfont\">Monitor Name</th><th class=\"titfont\">Value</th></tr>");
+                        client.println("<tr><td class=\"cellfont1\">Temperature</td><td class=\"cellfont2\">" + (String)(temperatrue_humidity_sensor.t) + "</td></tr>");
+                        client.println("<tr><td class=\"cellfont1\">Humidity</td><td class=\"cellfont2\">" + (String)(temperatrue_humidity_sensor.h) + "</td></tr>");
+                        client.println("<tr><td class=\"cellfont1\">Pressure</td><td class=\"cellfont2\">" + (String)(pressure_sensor.pressure) + "</td></tr>");
+                        client.println("<tr><td class=\"cellfont1\">Weather</td><td class=\"cellfont2\">" + weatherNow.getWeatherText() + "</td></tr>");
+                        client.println("<tr><td class=\"cellfont1\">Water</td><td class=\"cellfont2\">" + (String)(waterdrop_sensor.quantity) + "</td></tr>");
+                        client.println("</table>");
+
                         client.println("</body></html>");
                         
                         // The HTTP response ends with another blank line
@@ -419,53 +440,16 @@ void Task1code(void *pvParameters)
     for (;;)
     {
         temperatrue_humidity_sensor.get();
-        printf("t: %f\n h: %f\n", temperatrue_humidity_sensor.t, temperatrue_humidity_sensor.h);
+        printf("t:  %f\nh:  %f\n", temperatrue_humidity_sensor.t, temperatrue_humidity_sensor.h);
         pressure_sensor.get();
         printf("pr: %f\n", pressure_sensor.pressure);
         led.set();
         waterdrop_sensor.get();
         printf("water: %d\n", (waterdrop_sensor.quantity));
-        //test if i2c connected
-        byte error, address;
-        int nDevices;
-        Serial.println("Scanning...");
-        nDevices = 0;
-        for (address = 1; address < 127; address++)
-        {
-            Wire.beginTransmission(address);
-            error = Wire.endTransmission();
-            if (error == 0)
-            {
-                Serial.print("I2C device found at address 0x");
-                if (address < 16)
-                {
-                    Serial.print("0");
-                }
-                Serial.println(address, HEX);
-                nDevices++;
-            }
-            else if (error == 4)
-            {
-                Serial.print("Unknow error at address 0x");
-                if (address < 16)
-                {
-                    Serial.print("0");
-                }
-                Serial.println(address, HEX);
-            }
-        }
-        if (nDevices == 0)
-        {
-            Serial.println("No I2C devices found\n");
-        }
-        else
-        {
-            Serial.println("done\n");
-        }
         printf("\nstreching\n");
         motor.set(1);
         printf("\nstreched\n");
-        printf("\nshrinkinb\n");
+        printf("\nshrinking\n");
         motor.set(-1);
         printf("\nshrunk\n");
         delay(2500);
@@ -475,6 +459,10 @@ void Task1code(void *pvParameters)
 void Task2code(void *pvParameters)
 {
     led.set_all(WiFi_disconnect_col);
+    // if (!WiFi.config(local_IP, gateway, subnet, primaryDNS))
+    // {
+    //     Serial.println("STA Failed to configure");
+    // }
     Wifi_Connect();
     server.begin();
     weatherNow.config(reqUserKey, reqLocation, reqUnit);
