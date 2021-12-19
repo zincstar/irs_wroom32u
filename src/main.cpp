@@ -191,18 +191,18 @@ public:
         if (sta == 1)
         {
             myStepper.step(stepsPerRevolution/4);
-            delay(2500);
+            delay(500);
             myStepper.step(stepsPerRevolution/4);
-            delay(2500);
+            delay(500);
             this->status = 1;
             return;
         }
         if (sta == -1)
         {
             myStepper.step(-stepsPerRevolution/4);
-            delay(2500);
+            delay(500);
             myStepper.step(-stepsPerRevolution/4);
-            delay(2500);
+            delay(500);
             this->status = -1;
             return;
         }
@@ -334,6 +334,7 @@ String header;
 unsigned long current_Time=millis();
 unsigned long previous_Time=0;
 const long timeout_Time=30000;
+String Motor_Status_String[2]={"Shrunk","Stretched"};
 void Web_Server_Monitor()
 {
     /*
@@ -387,6 +388,17 @@ void Web_Server_Monitor()
                             header="";
                         }
 
+                        if (header.indexOf("GET /2/on") >= 0) {
+                            Serial.println("Motor Stretching...");
+                            motor.set(1);
+                            header="";
+                        } 
+                        else if (header.indexOf("GET /2/off") >= 0) {
+                            Serial.println("Motor Shrinking...");
+                            motor.set(-1);
+                            header="";
+                        }
+
                         // Display the HTML web page
                         client.println("<!DOCTYPE html><html>");
                         client.println("<head><meta charset=\"utf-8\" name=\"viewport\" content=\"width=device-width, initial-scale=1\">");
@@ -404,10 +416,14 @@ void Web_Server_Monitor()
                         client.println("<body><h1>ESP32 Web Server</h1>");
                         
                         // Display current state, and ON/OFF buttons for GPIO 26  
-                        client.println("<p>LED_1 - State " + LEDState1 + "</p>");
+                        client.println("<p>LED_1 - State: " + LEDState1 + "</p>");
                         // If the LEDState1 is off, it displays the ON button       
                         if(LEDState1=="off")client.println("<p><a href=\"/1/on\"><button class=\"button\">ON</button></a></p>");
                         else client.println("<p><a href=\"/1/off\"><button class=\"button button2\">OFF</button></a></p>");
+
+                        client.println("<p>Motor_1 - State: " + Motor_Status_String[motor.status==1] + "</p>");  
+                        if(motor.status==-1)client.println("<p><a href=\"/2/on\"><button class=\"button\">ON</button></a></p>");
+                        else client.println("<p><a href=\"/2/off\"><button class=\"button button2\">OFF</button></a></p>");
                         
                         client.println("<table width=\"100%\" border=\"0\" cellspacing=\"1\" cellpadding=\"4\" bgcolor=\"#cccccc\" align=\"center\">");
                         client.println("<caption><font size=\"7\">Monitor Status</font></caption>");
@@ -447,10 +463,10 @@ void Task1code(void *pvParameters)
         waterdrop_sensor.get();
         printf("water: %d\n", (waterdrop_sensor.quantity));
         printf("\nstreching\n");
-        motor.set(1);
+        // motor.set(1);
         printf("\nstreched\n");
         printf("\nshrinking\n");
-        motor.set(-1);
+        // motor.set(-1);
         printf("\nshrunk\n");
         delay(2500);
     }
