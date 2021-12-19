@@ -10,7 +10,16 @@
 #include <ArduinoJson.h>
 #include "WeatherNow.h"
 #include <WebServer.h>
+#include <ESP_Mail_Client.h>
 #define null -999
+#define SMTP_HOST "smtp.163.com"
+#define SMTP_PORT 465
+/* The sign in credentials */
+#define AUTHOR_EMAIL "esp32_station@163.com"
+#define AUTHOR_PASSWORD "CJIVAETSOCRBUQCM"
+
+/* Recipient's email*/
+#define RECIPIENT_EMAIL "pidtlsj@qq.com"
 const char *ssid = "wifi";                      // Wifi name
 const char *password = "23332333qwq";           // Wifi password
 const char* reqUserKey = "SuzImoB5Dv06BZmNU";   // 心知天气api私钥
@@ -23,7 +32,10 @@ String LEDState1="on";                               // LED灯的开关状态
 // IPAddress subnet(255, 255, 255, 0);
 // IPAddress primaryDNS(192, 168, 1, 1);   //optional
 
+SMTPSession smtp;
 WiFiServer server(80);
+void smtpCallback(SMTP_Status status);
+void ESP_Send_Email(int id);
 
 #define PWM_FREQ 32000
 #define PWM_RESOLUTION 8
@@ -399,6 +411,11 @@ void Web_Server_Monitor()
                             header="";
                         }
 
+                        if (header.indexOf("GET /3/2") >= 0) {
+                            ESP_Send_Email(2);
+                            header="";
+                        } 
+
                         // Display the HTML web page
                         client.println("<!DOCTYPE html><html>");
                         client.println("<head><meta charset=\"utf-8\" name=\"viewport\" content=\"width=device-width, initial-scale=1\">");
@@ -424,7 +441,10 @@ void Web_Server_Monitor()
                         client.println("<p>Motor_1 - State: " + Motor_Status_String[motor.status==1] + "</p>");  
                         if(motor.status==-1)client.println("<p><a href=\"/2/on\"><button class=\"button\">ON</button></a></p>");
                         else client.println("<p><a href=\"/2/off\"><button class=\"button button2\">OFF</button></a></p>");
-                        
+
+                        client.println("<h2>Email Report</h2>"); 
+                        client.println("<p><a href=\"/3/2\"><button class=\"button button1\">Send</button></a></p>");
+
                         client.println("<table width=\"100%\" border=\"0\" cellspacing=\"1\" cellpadding=\"4\" bgcolor=\"#cccccc\" align=\"center\">");
                         client.println("<caption><font size=\"7\">Monitor Status</font></caption>");
                         client.println("<caption>Last update time:" + (String)((current_Time - previous_Time)/1000) + " second(s) ago</caption>");
@@ -451,6 +471,86 @@ void Web_Server_Monitor()
     }
 }
 
+void ESP_Send_Email(int id) // 1->Warning 2->Report
+{
+    /* Set the callback function to get the sending results */
+    smtp.callback(smtpCallback);
+
+    /* Declare the session config data */
+    ESP_Mail_Session session;
+
+    /* Set the session config */
+    session.server.host_name = SMTP_HOST;
+    session.server.port = SMTP_PORT;
+    session.login.email = AUTHOR_EMAIL;
+    session.login.password = AUTHOR_PASSWORD;
+    session.login.user_domain = "";
+
+    /* Declare the message class */
+    SMTP_Message message;
+
+    /* Set the message headers */
+    message.sender.name = "ESP_Canopy_noreply";
+    message.sender.email = AUTHOR_EMAIL;
+    message.subject = "ESP Monitors Report";
+    message.addRecipient("Phinney", RECIPIENT_EMAIL);
+
+    /*Send HTML message*/
+    String htmlMsg="";
+    if(id==1)
+    {
+        message.subject = "Notice - It's raining now";
+        htmlMsg += "<div style=\"color:#2f4468;\"><h1>ESP32 platform has monitored that it is raining now, and your canopy has automatically stretched.</h1>";
+    }
+    htmlMsg += "<div style=\"color:#2f4468;\"><h2>Monitors Report</h2><table>";
+    htmlMsg += "<tr><td style=\"color:#255e95;\"><b>Temperature</b></td><td>" + (String)(temperatrue_humidity_sensor.t) + "</td></tr>";
+    htmlMsg += "<tr><td style=\"color:#255e95;\"><b>Humidity</b></td><td>" + (String)(temperatrue_humidity_sensor.h) + "</td></tr>";
+    htmlMsg += "<tr><td style=\"color:#255e95;\"><b>Pressure</b></td><td>" + (String)(pressure_sensor.pressure) + "</td></tr>";
+    htmlMsg += "<tr><td style=\"color:#255e95;\"><b>Weather</b></td><td>" + weatherNow.getWeatherText() + "</td></tr>";
+    htmlMsg += "<tr><td style=\"color:#255e95;\"><b>Water</b></td><td>" + (String)(waterdrop_sensor.quantity) + "</td></tr>";
+    
+    htmlMsg += "</table><p>- Sent from ESP32 board</p></div>";
+    message.html.content = htmlMsg.c_str();
+    message.text.charSet = "us-ascii";
+    message.html.transfer_encoding = Content_Transfer_Encoding::enc_7bit;
+
+    /* Connect to server with the session config */
+    if (!smtp.connect(&session))
+        return;
+
+    /* Start sending Email and close the session */
+    if (!MailClient.sendMail(&smtp, &message))
+        Serial.println("Error sending Email, " + smtp.errorReason());
+}
+
+void smtpCallback(SMTP_Status status){
+  /* Print the current status */
+  Serial.println(status.info());
+
+  /* Print the sending result */
+  if (status.success()){
+    Serial.println("----------------");
+    ESP_MAIL_PRINTF("Message sent success: %d\n", status.completedCount());
+    ESP_MAIL_PRINTF("Message sent failled: %d\n", status.failedCount());
+    Serial.println("----------------\n");
+    struct tm dt;
+
+    for (size_t i = 0; i < smtp.sendingResult.size(); i++){
+      /* Get the result item */
+      SMTP_Result result = smtp.sendingResult.getItem(i);
+      time_t ts = (time_t)result.timestamp;
+      localtime_r(&ts, &dt);
+
+      ESP_MAIL_PRINTF("Message No: %d\n", i + 1);
+      ESP_MAIL_PRINTF("Status: %s\n", result.completed ? "success" : "failed");
+      ESP_MAIL_PRINTF("Date/Time: %d/%d/%d %d:%d:%d\n", dt.tm_year + 1900, dt.tm_mon + 1, dt.tm_mday, dt.tm_hour, dt.tm_min, dt.tm_sec);
+      ESP_MAIL_PRINTF("Recipient: %s\n", result.recipients);
+      ESP_MAIL_PRINTF("Subject: %s\n", result.subject);
+    }
+    Serial.println("----------------\n");
+  }
+}
+
 void Task1code(void *pvParameters)
 {
     for (;;)
@@ -462,12 +562,6 @@ void Task1code(void *pvParameters)
         led.set();
         waterdrop_sensor.get();
         printf("water: %d\n", (waterdrop_sensor.quantity));
-        printf("\nstreching\n");
-        // motor.set(1);
-        printf("\nstreched\n");
-        printf("\nshrinking\n");
-        // motor.set(-1);
-        printf("\nshrunk\n");
         delay(2500);
     }
 }
@@ -507,92 +601,3 @@ void loop()
 {
     delay(5000);    
 }
-
-//tcp example:
-    /*
-    const char* host = "www.baidu.com";
-    Serial.print("connecting to ");
-    Serial.println(host);
-
-    // Use WiFiClient class to create TCP connections
-    WiFiClient client;
-    const int httpPort = 80;
-    if (!client.connect(host, httpPort)) {
-        Serial.println("connection failed");
-        return;
-    }
-
-    // We now create a URI for the request
-    String url = "/";
-
-    Serial.print("Requesting URL: ");
-    Serial.println(url);
-
-    // This will send the request to the server
-    client.print(String("GET ") + url + " HTTP/1.1\r\n" +
-                 "Host: " + host + "\r\n" +
-                 "Connection: close\r\n\r\n");
-    unsigned long timeout = millis();
-    while (client.available() == 0) {
-        if (millis() - timeout > 5000) {
-            Serial.println(">>> Client Timeout !");
-            client.stop();
-            return;
-        }
-    }
-
-    // Read all the lines of the reply from server and print them to Serial
-    while(client.available()) {
-        String line = client.readStringUntil('\r');
-        Serial.print(line);
-    }
-    */
-   /*
-void InputInitial(void) //设置端口为输入
-        {
-            gpio_pad_select_gpio(DHT11_PIN);
-            gpio_set_direction(DHT11_PIN, GPIO_MODE_INPUT);
-        }
-        void OutputHigh(void) //输出 1
-        {
-            gpio_pad_select_gpio(DHT11_PIN);
-            gpio_set_direction(DHT11_PIN, GPIO_MODE_OUTPUT);
-            gpio_set_level(DHT11_PIN, 1);
-        }
-        void OutputLow(void) //输出 0
-        {
-            gpio_pad_select_gpio(DHT11_PIN);
-            gpio_set_direction(DHT11_PIN, GPIO_MODE_OUTPUT);
-            gpio_set_level(DHT11_PIN, 0);
-        }
-        //位数据 0 和位数据 1 的区别是：数据 1 的高电平时间比数据 0 的时间长，根据这个特 点，读取一个字节的代码如下：
-
-        //读取一个字节数据
-        void get_one_byte(void) // 温湿写入
-        {
-            int comdata=0;
-            for (int i = 0; i < 8; i++)
-            {
-                int FLAG = 2;
-
-                //等待 IO 口变低，变低后，通过延时去判断是 0 还是 1
-                while ((getData() == 0) && FLAG++)
-                    ets_delay_us(10);
-                ets_delay_us(35); //延时 35us
-                int temp = 0;
-
-                //如果这个位是 1，35us 后，还是 1，否则为 0
-                if (getData() == 1)
-                    temp = 1;
-                FLAG = 2;
-
-                //等待 IO 口变高，变高后，表示可以读取下一位
-                while ((getData() == 1) && FLAG++)
-                    ets_delay_us(10);
-                if (FLAG == 1)
-                    break;
-                comdata <<= 1;
-                comdata |= temp;
-            }
-        }
-        */
