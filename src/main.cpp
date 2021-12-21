@@ -12,7 +12,6 @@
 #include "WeatherNow.h"
 #include <WebServer.h>
 #include <ESP_Mail_Client.h>
-// #include "index.h"
 
 #define null -999
 #define SMTP_HOST "smtp.163.com"
@@ -28,7 +27,7 @@ const char *password = "23332333qwq";           // Wifi password
 const char* reqUserKey = "SuzImoB5Dv06BZmNU";   // 心知天气api私钥
 const char* reqLocation = "beijing";            // 城市，可使用"ip"自动识别请求 IP 地址
 const char* reqUnit = "c";                      // 摄氏(c)/华氏(f)
-String LEDState1="on";                               // LED灯的开关状态
+int LEDState1=1;                               // LED灯的开关状态
 
 // IPAddress local_IP(192, 168, 200, 35);// Set your Static IP address
 // IPAddress gateway(192, 168, 200, 103);// Set your Gateway IP address
@@ -220,7 +219,7 @@ public:
     {
         //code: interact with led pins
         // printf("set_led_col:%d %d %d\n",status[0].b,status[0].r,status[0].g);
-        if(LEDState1=="off")return;
+        if(LEDState1==0)return;
         analogWrite(25, this->status[0].b); //blue
         analogWrite(26, this->status[0].r); //red
         analogWrite(27, this->status[0].g); //green
@@ -274,7 +273,7 @@ public:
 };
 
 Waterdrop_sensor waterdrop_sensor;
-Temperature_humidity_sensor temperatrue_humidity_sensor;
+Temperature_humidity_sensor temperature_humidity_sensor;
 Pressure_sensor pressure_sensor;
 WeatherNow weatherNow;
 Weather weather;
@@ -282,31 +281,99 @@ Motor motor;
 
 String myhtmlPage =
     String("") +
-    "<html>" +
+    "<!DOCTYPE html><html>" +
     "<head>" +
     "    <meta charset=\"utf-8\">" +
-    "    <title>ESP32 WebServer Test</title>" +
+    "    <title>ESP32 WebServer</title>" +
     "    <script>" +
+    "       setInterval(function() {" +
+    "       getData();" +
+    "       }, 10000);" +
     "        function getData() {" +
-    "            document.getElementById(\"txtRandomData\").innerHTML = \"114514\";" +
     "            var xmlhttp = new XMLHttpRequest();" +
     "            xmlhttp.onreadystatechange = function () {" +
-    "                if (http.readyState == 4) {" +
+    "                if (this.readyState == 4 && this.status == 200) {" +
     "                    try {" +
-    "                        var msg = JSON.parse(http.responseText);" +
+    "                        var msg = JSON.parse(this.responseText);" +
     "                        var var1 = msg.var1;" +
-    "                        document.getElementById(\"txtRandomData\").innerHTML = var1;" +
+    "                        var var2 = msg.var2;" +
+    "                        var var3 = msg.var3;" +
+    "                        var var4 = msg.var4;" +
+    "                        var var5 = msg.var5;" +
+    "                        document.getElementById(\"SensorData1\").innerHTML = var1;" +
+    "                        document.getElementById(\"SensorData2\").innerHTML = var2;" +
+    "                        document.getElementById(\"SensorData3\").innerHTML = var3;" +
+    "                        document.getElementById(\"SensorData4\").innerHTML = var4;" +
+    "                        document.getElementById(\"SensorData5\").innerHTML = var5;" +
     "                    }catch (e) {}" +
     "                }" +
     "            }," +
-    "            xmlhttp.open(\"GET\", \"getRandomData\", true); " +
+    "            xmlhttp.open(\"GET\", \"getData\", true); " +
+    "            xmlhttp.send();" +
+    "        }" +
+    "        function SwitchMotor() {" +
+    "            var xmlhttp = new XMLHttpRequest();" +
+    "            xmlhttp.onreadystatechange = function () {" +
+    "                if (this.readyState == 4 && this.status == 200) {" +
+    "                    try {" +
+    "                        var msg = JSON.parse(this.responseText);" +
+    "                        var var1 = msg.var1;" +
+    "                        document.getElementById(\"MotorSta\").innerHTML = var1;" +
+    "                    }catch (e) {}" +
+    "                }" +
+    "            }," +
+    "            xmlhttp.open(\"GET\", \"SwitchMotor\", true); " +
+    "            xmlhttp.send();" +
+    "        }" +
+    "        function SwitchLED() {" +
+    "            var xmlhttp = new XMLHttpRequest();" +
+    "            xmlhttp.onreadystatechange = function () {" +
+    "                if (this.readyState == 4 && this.status == 200) {" +
+    "                    try {" +
+    "                        var msg = JSON.parse(this.responseText);" +
+    "                        var var1 = msg.var1;" +
+    "                        document.getElementById(\"LEDSta\").innerHTML = var1;" +
+    "                    }catch (e) {}" +
+    "                }" +
+    "            }," +
+    "            xmlhttp.open(\"GET\", \"SwitchLED\", true); " +
+    "            xmlhttp.send();" +
+    "        }" +
+    "        function EmailReport() {" +
+    "            var xmlhttp = new XMLHttpRequest();" +
+    "            xmlhttp.open(\"GET\", \"EmailReport\", true); " +
     "            xmlhttp.send();" +
     "        }" +
     "    </script>" +
+    "    <link rel=\"icon\" href=\"https://www.buaa.edu.cn/favicon.ico\">" +
+    "    <style>html { font-family: Helvetica; display: inline-block; margin: 0px auto; text-align: center;}" +
+    "        .button { background-color: #4CAF50; border: none; color: white; padding: 16px 40px;" +
+    "        text-decoration: none; font-size: 30px; margin: 2px; cursor: pointer;}" +
+    "        .button2 {background-color: #555555;}" +
+    "    </style>" +
+    "    <style type=\"text/css\">" +
+    "        th.titfont{font-size: 22px;font-weight: bold;color: #255e95;background-color:#e9faff;}" +
+    "        td.cellfont1{font-size: 18px;background:#f2fbfe;}" +
+    "        td.cellfont2{font-size: 18px;background:#fffaaa;}" +
+    "    </style>" +
     "</head>" +
     "<body>" +
-    "    <div id=\"txtRandomData\">Unknown</div>" +
-    "    <input type=\"button\" value=\"random\" οnclick=\"getData()\">" +
+    "    <h1>ESP32 Web Server</h1>" +
+    "    <p>LED_1 - State: </p><div id=\"LEDSta\">On</div>" +
+    "    <input type=\"button\" class=\"button button1\" value=\"Switch\" onclick=\"SwitchLED()\"></div>" +
+    "    <p>Motor_1 - State: </p><div id=\"MotorSta\">Shrunk</div>" +
+    "    <input type=\"button\" class=\"button button1\" value=\"Switch\" onclick=\"SwitchMotor()\"></div>" +
+    "    <h2>Email Report</h2>" +
+    "    <input type=\"button\" class=\"button button1\" value=\"Send\" onclick=\"EmailReport()\"></div>" +
+    "    <table width=\"100%\" border=\"0\" cellspacing=\"1\" cellpadding=\"4\" bgcolor=\"#cccccc\" align=\"center\">" +
+    "        <caption><font size=\"7\">Monitor Status</font></caption>" +
+    "        <tr><th class=\"titfont\">Monitor Name</th><th class=\"titfont\">Value</th></tr>" +
+    "        <tr><td class=\"cellfont1\">Temperature</td><td class=\"cellfont2\"><div id=\"SensorData1\">Unknown</div></td></tr>" +
+    "        <tr><td class=\"cellfont1\">Humidity</td><td class=\"cellfont2\"><div id=\"SensorData2\">Unknown</div></td></tr>" +
+    "        <tr><td class=\"cellfont1\">Pressure</td><td class=\"cellfont2\"><div id=\"SensorData3\">Unknown</div></td></tr>" +
+    "        <tr><td class=\"cellfont1\">Weather</td><td class=\"cellfont2\"><div id=\"SensorData4\">Unknown</div></td></tr>" +
+    "        <tr><td class=\"cellfont1\">Water</td><td class=\"cellfont2\"><div id=\"SensorData5\">Unknown</div></td></tr>" +
+    "    </table>" +
     "</body>" +
     "</html>";
 
@@ -384,6 +451,7 @@ unsigned long current_Time=millis();
 unsigned long previous_Time=0;
 const long timeout_Time=30000;
 String Motor_Status_String[2]={"Shrunk","Stretched"};
+String Button_Status[2]={"Off","On"};
 void Web_Server_Monitor()
 {
     /*
@@ -486,8 +554,8 @@ void Web_Server_Monitor()
                         client.println("<caption><font size=\"7\">Monitor Status</font></caption>");
                         client.println("<caption>Last update time:" + (String)((current_Time - previous_Time)/1000) + " second(s) ago</caption>");
                         client.println("<tr><th class=\"titfont\">Monitor Name</th><th class=\"titfont\">Value</th></tr>");
-                        client.println("<tr><td class=\"cellfont1\">Temperature</td><td class=\"cellfont2\">" + (String)(temperatrue_humidity_sensor.t) + "</td></tr>");
-                        client.println("<tr><td class=\"cellfont1\">Humidity</td><td class=\"cellfont2\">" + (String)(temperatrue_humidity_sensor.h) + "</td></tr>");
+                        client.println("<tr><td class=\"cellfont1\">Temperature</td><td class=\"cellfont2\">" + (String)(temperature_humidity_sensor.t) + "</td></tr>");
+                        client.println("<tr><td class=\"cellfont1\">Humidity</td><td class=\"cellfont2\">" + (String)(temperature_humidity_sensor.h) + "</td></tr>");
                         client.println("<tr><td class=\"cellfont1\">Pressure</td><td class=\"cellfont2\">" + (String)(pressure_sensor.pressure) + "</td></tr>");
                         client.println("<tr><td class=\"cellfont1\">Weather</td><td class=\"cellfont2\">" + weatherNow.getWeatherText() + "</td></tr>");
                         client.println("<tr><td class=\"cellfont1\">Water</td><td class=\"cellfont2\">" + (String)(waterdrop_sensor.quantity) + "</td></tr>");
@@ -540,8 +608,8 @@ void ESP_Send_Email(int id) // 1->Warning 2->Report
         htmlMsg += "<div style=\"color:#2f4468;\"><h1>ESP32 platform has monitored that it is raining now, and your canopy has automatically stretched.</h1>";
     }
     htmlMsg += "<div style=\"color:#2f4468;\"><h2>Monitors Report</h2><table>";
-    htmlMsg += "<tr><td style=\"color:#255e95;\"><b>Temperature</b></td><td>" + (String)(temperatrue_humidity_sensor.t) + "</td></tr>";
-    htmlMsg += "<tr><td style=\"color:#255e95;\"><b>Humidity</b></td><td>" + (String)(temperatrue_humidity_sensor.h) + "</td></tr>";
+    htmlMsg += "<tr><td style=\"color:#255e95;\"><b>Temperature</b></td><td>" + (String)(temperature_humidity_sensor.t) + "</td></tr>";
+    htmlMsg += "<tr><td style=\"color:#255e95;\"><b>Humidity</b></td><td>" + (String)(temperature_humidity_sensor.h) + "</td></tr>";
     htmlMsg += "<tr><td style=\"color:#255e95;\"><b>Pressure</b></td><td>" + (String)(pressure_sensor.pressure) + "</td></tr>";
     htmlMsg += "<tr><td style=\"color:#255e95;\"><b>Weather</b></td><td>" + weatherNow.getWeatherText() + "</td></tr>";
     htmlMsg += "<tr><td style=\"color:#255e95;\"><b>Water</b></td><td>" + (String)(waterdrop_sensor.quantity) + "</td></tr>";
@@ -593,13 +661,40 @@ void handleRoot() //回调函数
     server.send(200, "text/html", myhtmlPage); //！！！注意返回网页需要用"text/html" ！！！
 }
 
-void handleAjax() //回调函数
+void handleData() //回调函数
 {
-    // String message = "随机数据：";
-    // message += String(random(10000)); //取得随机数
-    // server.send(200, "text/plain", message); //将消息发送回页面
-    String var1 = "random_number";
-    String jresp = "{\"var1\":\""+var1+"\"}";
+    String var1 = (String)(temperature_humidity_sensor.t);
+    String var2 = (String)(temperature_humidity_sensor.h);
+    String var3 = (String)(pressure_sensor.pressure);
+    String var4 = weatherNow.getWeatherText();
+    String var5 = (String)(waterdrop_sensor.quantity);
+    String jresp = "{\"var1\":\"" + var1 + "\",\"var2\":\"" + var2 + "\",\"var3\":\"" + var3 + "\",\"var4\":\"" + var4 + "\",\"var5\":\"" + var5 + "\"}";
+    server.send(200, "application/json", jresp);
+}
+
+void handleLED() //回调函数
+{
+    if(LEDState1==1)led.set_all(LED_Off),LEDState1=0;
+    else LEDState1=1,led.set_all((WiFi.status() != WL_CONNECTED)?WiFi_disconnect_col:WiFi_connect_col);
+    LEDState1=0;
+    String var1 = Button_Status[LEDState1];
+    String jresp = "{\"var1\":\"" + var1 + "\"}";
+    server.send(200, "application/json", jresp);
+}
+
+void handleMotor() //回调函数
+{
+    motor.set((motor.status==1)?(-1):1);
+    String var1 = Motor_Status_String[motor.status==1];
+    String jresp = "{\"var1\":\"" + var1 + "\"}";
+    server.send(200, "application/json", jresp);
+    delay(2500);
+}
+
+void handleEmail() //回调函数
+{
+    ESP_Send_Email(2);
+    String jresp = "{}";
     server.send(200, "application/json", jresp);
 }
 
@@ -607,8 +702,8 @@ void Task1code(void *pvParameters)
 {
     for (;;)
     {
-        temperatrue_humidity_sensor.get();
-        printf("t:  %f\nh:  %f\n", temperatrue_humidity_sensor.t, temperatrue_humidity_sensor.h);
+        temperature_humidity_sensor.get();
+        printf("t:  %f\nh:  %f\n", temperature_humidity_sensor.t, temperature_humidity_sensor.h);
         pressure_sensor.get();
         printf("pr: %f\n", pressure_sensor.pressure);
         led.set();
@@ -627,18 +722,21 @@ void Task2code(void *pvParameters)
     // }
     Wifi_Connect();
     server.on("/", handleRoot);                        //注册链接和回调函数
-    server.on("/getRandomData", HTTP_GET, handleAjax); //注册网页中ajax发送的get方法的请求和回调函数
+    server.on("/getData", HTTP_GET, handleData); //注册网页中ajax发送的get方法的请求和回调函数
+    server.on("/SwitchLED", HTTP_GET, handleLED); //注册网页中ajax发送的get方法的请求和回调函数
+    server.on("/SwitchMotor", HTTP_GET, handleMotor); //注册网页中ajax发送的get方法的请求和回调函数
+    server.on("/EmailReport", HTTP_GET, handleEmail); //注册网页中ajax发送的get方法的请求和回调函数
     server.begin();
     weatherNow.config(reqUserKey, reqLocation, reqUnit);
     for (;;)
     {
-        server.handleClient();
         Wifi_Check();
-        // if (WiFi.status() == WL_CONNECTED)
-        // {
-        //     get_weather_api();
-        //     Web_Server_Monitor();
-        // }
+        if (WiFi.status() == WL_CONNECTED)
+        {
+            get_weather_api();
+            server.handleClient();
+            // Web_Server_Monitor();
+        }
         delay(2500);
     }
 }
