@@ -6,11 +6,14 @@
 #include <Adafruit_BMP280.h>
 #include <Stepper.h>
 #include <WiFi.h>
+#include <WiFiClient.h>
 #include <HTTPClient.h>
 #include <ArduinoJson.h>
 #include "WeatherNow.h"
 #include <WebServer.h>
 #include <ESP_Mail_Client.h>
+// #include "index.h"
+
 #define null -999
 #define SMTP_HOST "smtp.163.com"
 #define SMTP_PORT 465
@@ -33,7 +36,8 @@ String LEDState1="on";                               // LED灯的开关状态
 // IPAddress primaryDNS(192, 168, 1, 1);   //optional
 
 SMTPSession smtp;
-WiFiServer server(80);
+// WiFiServer server(80);
+WebServer server(80);
 void smtpCallback(SMTP_Status status);
 void ESP_Send_Email(int id);
 
@@ -184,43 +188,6 @@ public:
     }
 };
 
-const int stepsPerRevolution = 2048;
-Stepper myStepper(stepsPerRevolution, 19, 5, 18, 17);
-class Motor
-{
-public:
-    int status; //1->stretch -1->shrink
-    Motor()
-    {
-        this->status = -1;
-        //shrink the shed before it run!
-        myStepper.setSpeed(5);
-    }
-    void set(int sta)
-    {
-        if (this->status == sta)
-            return;
-        if (sta == 1)
-        {
-            myStepper.step(stepsPerRevolution/4);
-            delay(500);
-            myStepper.step(stepsPerRevolution/4);
-            delay(500);
-            this->status = 1;
-            return;
-        }
-        if (sta == -1)
-        {
-            myStepper.step(-stepsPerRevolution/4);
-            delay(500);
-            myStepper.step(-stepsPerRevolution/4);
-            delay(500);
-            this->status = -1;
-            return;
-        }
-    }
-};
-
 const int led_num = 1;
 struct Led_color
 {
@@ -235,6 +202,7 @@ struct Led_color
 
 const Led_color WiFi_disconnect_col = Led_color(255, 0, 0);
 const Led_color WiFi_connect_col = Led_color(0, 255, 0);
+const Led_color Motor_Running = Led_color(0, 0, 255);
 const Led_color LED_Off = Led_color(255,255,255);
 
 class Led
@@ -264,6 +232,46 @@ public:
         this->set();
     }
 };
+Led led;
+
+const int stepsPerRevolution = 2048;
+Stepper myStepper(stepsPerRevolution, 19, 5, 18, 17);
+class Motor
+{
+public:
+    int status; //1->stretch -1->shrink
+    Motor()
+    {
+        this->status = -1;
+        //shrink the shed before it run!
+        myStepper.setSpeed(5);
+    }
+    void set(int sta)
+    {
+        if (this->status == sta)
+            return;
+        Led_color las=led.status[0];
+        led.set_all(Motor_Running);
+        if (sta == 1)
+        {
+            myStepper.step(stepsPerRevolution/4);
+            delay(500);
+            myStepper.step(stepsPerRevolution/4);
+            delay(500);
+            this->status = 1;
+        }
+        if (sta == -1)
+        {
+            myStepper.step(-stepsPerRevolution/4);
+            delay(500);
+            myStepper.step(-stepsPerRevolution/4);
+            delay(500);
+            this->status = -1;
+        }
+        led.set_all(las);
+        return;
+    }
+};
 
 Waterdrop_sensor waterdrop_sensor;
 Temperature_humidity_sensor temperatrue_humidity_sensor;
@@ -271,7 +279,36 @@ Pressure_sensor pressure_sensor;
 WeatherNow weatherNow;
 Weather weather;
 Motor motor;
-Led led;
+
+String myhtmlPage =
+    String("") +
+    "<html>" +
+    "<head>" +
+    "    <meta charset=\"utf-8\">" +
+    "    <title>ESP32 WebServer Test</title>" +
+    "    <script>" +
+    "        function getData() {" +
+    "            document.getElementById(\"txtRandomData\").innerHTML = \"114514\";" +
+    "            var xmlhttp = new XMLHttpRequest();" +
+    "            xmlhttp.onreadystatechange = function () {" +
+    "                if (http.readyState == 4) {" +
+    "                    try {" +
+    "                        var msg = JSON.parse(http.responseText);" +
+    "                        var var1 = msg.var1;" +
+    "                        document.getElementById(\"txtRandomData\").innerHTML = var1;" +
+    "                    }catch (e) {}" +
+    "                }" +
+    "            }," +
+    "            xmlhttp.open(\"GET\", \"getRandomData\", true); " +
+    "            xmlhttp.send();" +
+    "        }" +
+    "    </script>" +
+    "</head>" +
+    "<body>" +
+    "    <div id=\"txtRandomData\">Unknown</div>" +
+    "    <input type=\"button\" value=\"random\" οnclick=\"getData()\">" +
+    "</body>" +
+    "</html>";
 
 void Wifi_Connect()
 {
@@ -355,7 +392,7 @@ void Web_Server_Monitor()
     the currentLine was not cleared when an old client still listening.
     Result:solved by clear header once check out an available get line.
     */
-    WiFiClient client = server.available();
+    /*WiFiClient client = server.available();
     if(!client.connected())
     {
         header="";
@@ -468,7 +505,7 @@ void Web_Server_Monitor()
                 else if (c != '\r') currentLine += c;
             }
         }
-    }
+    }*/
 }
 
 void ESP_Send_Email(int id) // 1->Warning 2->Report
@@ -551,6 +588,21 @@ void smtpCallback(SMTP_Status status){
   }
 }
 
+void handleRoot() //回调函数
+{
+    server.send(200, "text/html", myhtmlPage); //！！！注意返回网页需要用"text/html" ！！！
+}
+
+void handleAjax() //回调函数
+{
+    // String message = "随机数据：";
+    // message += String(random(10000)); //取得随机数
+    // server.send(200, "text/plain", message); //将消息发送回页面
+    String var1 = "random_number";
+    String jresp = "{\"var1\":\""+var1+"\"}";
+    server.send(200, "application/json", jresp);
+}
+
 void Task1code(void *pvParameters)
 {
     for (;;)
@@ -574,16 +626,19 @@ void Task2code(void *pvParameters)
     //     Serial.println("STA Failed to configure");
     // }
     Wifi_Connect();
+    server.on("/", handleRoot);                        //注册链接和回调函数
+    server.on("/getRandomData", HTTP_GET, handleAjax); //注册网页中ajax发送的get方法的请求和回调函数
     server.begin();
     weatherNow.config(reqUserKey, reqLocation, reqUnit);
     for (;;)
     {
+        server.handleClient();
         Wifi_Check();
-        if (WiFi.status() == WL_CONNECTED)
-        {
-            get_weather_api();
-            Web_Server_Monitor();
-        }
+        // if (WiFi.status() == WL_CONNECTED)
+        // {
+        //     get_weather_api();
+        //     Web_Server_Monitor();
+        // }
         delay(2500);
     }
 }
