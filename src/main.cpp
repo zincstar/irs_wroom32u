@@ -676,7 +676,6 @@ void handleLED() //回调函数
 {
     if(LEDState1==1)led.set_all(LED_Off),LEDState1=0;
     else LEDState1=1,led.set_all((WiFi.status() != WL_CONNECTED)?WiFi_disconnect_col:WiFi_connect_col);
-    LEDState1=0;
     String var1 = Button_Status[LEDState1];
     String jresp = "{\"var1\":\"" + var1 + "\"}";
     server.send(200, "application/json", jresp);
