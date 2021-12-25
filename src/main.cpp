@@ -25,7 +25,7 @@
 const char *ssid = "wifi";                      // Wifi name
 const char *password = "23332333qwq";           // Wifi password
 const char* reqUserKey = "SuzImoB5Dv06BZmNU";   // 心知天气api私钥
-const char* reqLocation = "beijing";            // 城市，可使用"ip"自动识别请求 IP 地址
+const char* reqLocation = "beijingchangping";            // 城市，可使用"ip"自动识别请求 IP 地址
 const char* reqUnit = "c";                      // 摄氏(c)/华氏(f)
 int LEDState1=1;                               // LED灯的开关状态
 
@@ -158,35 +158,6 @@ public:
     }
 };
 
-class Weather
-{
-public:
-    int typ, level;
-    //typ:-999->null 1->sunny 2->rainy 3->cloudy 4->misty 5->smoggy 6->snowy 7->sand-dust
-    //level:-999->null 1(weak)--->10(strong)
-    Weather()
-    {
-        this->typ = -999;
-        this->level = -999;
-    }
-    void get()
-    {
-        //weather data vars are according to the api
-    }
-    void analysis_the_weather(int temp, int humi) //
-    {
-        this->typ = 2;
-        this->level = 3;
-        //the real algorithm will be updated soon
-    }
-    int check()
-    {
-        int res = -999;
-        //return a number(-1/1) to control the motor
-        return res;
-    }
-};
-
 const int led_num = 1;
 struct Led_color
 {
@@ -276,8 +247,47 @@ Waterdrop_sensor waterdrop_sensor;
 Temperature_humidity_sensor temperature_humidity_sensor;
 Pressure_sensor pressure_sensor;
 WeatherNow weatherNow;
-Weather weather;
 Motor motor;
+
+class Weather
+{
+public:
+    int typ, level;
+    /*
+        typ:-999->null 1->Sunny/Clear 2->rainy 3->Cloudy/Partly Cloudy/Mostly Cloudy
+        4->Overcast 5->Shower 6->Thundershower...
+        level:-999->null 1(weak)--->10(strong)
+        Reference:https://seniverse.yuque.com/books/share/e52aa43f-8fe9-4ffa-860d-96c0f3cf1c49/yev2c3?inner=d3LpV
+        ● 第一优先级：冰雹、雷暴、冰粒、冰针、龙卷风、热带风暴
+        ● 第二优先级：雪
+        ● 第三优先级：雨
+        ● 第四优先级：风和沙尘类（浮尘、扬沙、沙尘暴、风、大风、飓风）
+        ● 第五优先级：雾霾
+        ● 第六优先级：其他天气现象
+    */
+    Weather()
+    {
+        this->typ = -999;
+        this->level = -999;
+    }
+    void analysis_the_weather(int temp, int humi, int pres,int waterd) //
+    {
+        this->typ = 2;
+        this->level = 3;
+        //the real algorithm will be updated soon
+    }
+    void check()
+    {
+        analysis_the_weather(temperature_humidity_sensor.t, temperature_humidity_sensor.h, pressure_sensor.pressure, waterdrop_sensor.quantity);
+        int res = -999;
+        if(level && typ)
+        {
+            res++;
+        }
+        //return a number(-1/1) to control the motor
+    }
+};
+Weather weather;
 
 String myhtmlPage =
     String("") +
@@ -377,6 +387,7 @@ String myhtmlPage =
     "</body>" +
     "</html>";
 
+const char* appassword = "123456789";
 void Wifi_Connect()
 {
     Serial.printf("\n\nConnecting to %s", ssid);
@@ -389,6 +400,16 @@ void Wifi_Connect()
     led.set_all(WiFi_connect_col);
     Serial.printf("\nWiFi connected\nIP address: ");
     Serial.println(WiFi.localIP());
+    String tmp = WiFi.localIP().toString();
+    for (int i = 0; i < tmp.length(); i++)
+    {
+        if(tmp[i] == '.')
+        {
+            tmp[i] = '_';
+        }
+    }
+    const char* apssid =  tmp.c_str();
+    WiFi.softAP(apssid, appassword);
 }
 
 const int Connect_Try_Times = 3, Waiting_Times = 20;
@@ -708,6 +729,7 @@ void Task1code(void *pvParameters)
         led.set();
         waterdrop_sensor.get();
         printf("water: %d\n", (waterdrop_sensor.quantity));
+        weather.check();
         delay(2500);
     }
 }
