@@ -25,7 +25,7 @@
 const char *ssid = "wifi";                      // Wifi name
 const char *password = "23332333qwq";           // Wifi password
 const char* reqUserKey = "SLrCCb-7P3THqEagb";   // 心知天气api私钥
-const char* reqLocation = "beijingchangping";            // 城市，可使用"ip"自动识别请求 IP 地址
+const char* reqLocation = "39.98:116.35";            // 城市，可使用"ip"自动识别请求 IP 地址
 const char* reqUnit = "c";                      // 摄氏(c)/华氏(f)
 int LEDState1=1;                               // LED灯的开关状态
 
@@ -252,11 +252,10 @@ Motor motor;
 class Weather
 {
 public:
-    int typ, level;
+    int typ, flex;
     /*
-        typ:-999->null 1->Sunny/Clear 2->rainy 3->Cloudy/Partly Cloudy/Mostly Cloudy
-        4->Overcast 5->Shower 6->Thundershower...
-        level:-999->null 1(weak)--->10(strong)
+        typ:1/-1
+        level:1->normal 2->sensitive
         Reference:https://seniverse.yuque.com/books/share/e52aa43f-8fe9-4ffa-860d-96c0f3cf1c49/yev2c3?inner=d3LpV
         ● 第一优先级：冰雹、雷暴、冰粒、冰针、龙卷风、热带风暴
         ● 第二优先级：雪
@@ -268,22 +267,38 @@ public:
     Weather()
     {
         this->typ = -999;
-        this->level = -999;
+        this->flex = 1;
     }
     void analysis_the_weather(int temp, int humi, int pres,int waterd) //
     {
-        this->typ = 2;
-        this->level = 3;
+        if(waterd >= 10)
+        {
+            this->typ = 1;
+        }
+        else if (humi >= 80)
+        {
+            this->typ = 1;
+        }
+        else if (pres <= 980)
+        {
+            this->typ = 1;
+        }
+        else if (this->flex == 2 && (weatherNow.getWeatherCode() <= 29 && weatherNow.getWeatherCode() >= 10))
+        {
+            this->typ = 1;
+        }
+        else
+        {
+            this->typ = -1;
+        }
+        // this->typ = 2;
+        // this->level = 3;
         //the real algorithm will be updated soon
     }
     void check()
     {
         analysis_the_weather(temperature_humidity_sensor.t, temperature_humidity_sensor.h, pressure_sensor.pressure, waterdrop_sensor.quantity);
-        int res = -999;
-        if(level && typ)
-        {
-            res++;
-        }
+        motor.set(typ);
         //return a number(-1/1) to control the motor
     }
 };
