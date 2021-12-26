@@ -400,11 +400,11 @@ String myhtmlPage =
     "    <table width=\"100%\" border=\"0\" cellspacing=\"1\" cellpadding=\"4\" bgcolor=\"#cccccc\" align=\"center\">" +
     "        <caption><font size=\"7\">Monitor Status</font></caption>" +
     "        <tr><th class=\"titfont\">Monitor Name</th><th class=\"titfont\">Value</th></tr>" +
-    "        <tr><td class=\"cellfont1\">Temperature</td><td class=\"cellfont2\"><div id=\"SensorData1\">" + (String)temperature_humidity_sensor.t + "</div></td></tr>" +
-    "        <tr><td class=\"cellfont1\">Humidity</td><td class=\"cellfont2\"><div id=\"SensorData2\">" + (String)temperature_humidity_sensor.h + "</div></td></tr>" +
-    "        <tr><td class=\"cellfont1\">Pressure</td><td class=\"cellfont2\"><div id=\"SensorData3\">" + (String)pressure_sensor.pressure + "</div></td></tr>" +
-    "        <tr><td class=\"cellfont1\">Weather</td><td class=\"cellfont2\"><div id=\"SensorData4\">" + weatherNow.getWeatherText() + "</div></td></tr>" +
-    "        <tr><td class=\"cellfont1\">Water</td><td class=\"cellfont2\"><div id=\"SensorData5\">" + (String)waterdrop_sensor.quantity + "</div></td></tr>" +
+    "        <tr><td class=\"cellfont1\">Temperature</td><td class=\"cellfont2\"><div id=\"SensorData1\">Unknown</div></td></tr>" +
+    "        <tr><td class=\"cellfont1\">Humidity</td><td class=\"cellfont2\"><div id=\"SensorData2\">Unknown</div></td></tr>" +
+    "        <tr><td class=\"cellfont1\">Pressure</td><td class=\"cellfont2\"><div id=\"SensorData3\">Unknown</div></td></tr>" +
+    "        <tr><td class=\"cellfont1\">Weather</td><td class=\"cellfont2\"><div id=\"SensorData4\">Unknown</div></td></tr>" +
+    "        <tr><td class=\"cellfont1\">Water</td><td class=\"cellfont2\"><div id=\"SensorData5\">Unknown</div></td></tr>" +
     "    </table>" +
     "</body>" +
     "</html>";
@@ -762,7 +762,7 @@ void check_clothes()
     tm time_now;
     getLocalTime(&time_now);
     // if(difftime(mktime(&Clothes_end_time),mktime(&Clothes_start_time)) >= 3600 * 24 * 2)
-    if(difftime(mktime(&time_now),mktime(&Clothes_start_time)) >= 60)
+    if(difftime(mktime(&time_now),mktime(&Clothes_start_time)) >= 15)
     {
         ESP_Send_Email(3);
         Have_clothes = 0;
