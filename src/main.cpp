@@ -6,8 +6,8 @@
 #include <Adafruit_BMP280.h>
 #include <Stepper.h>
 #include <WiFi.h>
-#include <WiFiClient.h>
-#include <HTTPClient.h>
+// #include <WiFiClient.h>
+// #include <HTTPClient.h>
 #include <ArduinoJson.h>
 #include "WeatherNow.h"
 #include <WebServer.h>
