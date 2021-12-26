@@ -204,6 +204,7 @@ public:
 };
 Led led;
 
+const int half_circle_num = 15;
 const int stepsPerRevolution = 2048;
 Stepper myStepper(stepsPerRevolution, 19, 5, 18, 17);
 class Motor
@@ -214,7 +215,7 @@ public:
     {
         this->status = -1;
         //shrink the shed before it run!
-        myStepper.setSpeed(5);
+        myStepper.setSpeed(10);
     }
     void set(int sta)
     {
@@ -224,18 +225,24 @@ public:
         led.set_all(Motor_Running);
         if (sta == 1)
         {
-            myStepper.step(stepsPerRevolution/4);
-            delay(500);
-            myStepper.step(stepsPerRevolution/4);
-            delay(500);
+            for (int i = 1;i <= half_circle_num; i++)
+            {
+                myStepper.step(-stepsPerRevolution/4);
+                delay(500);
+                myStepper.step(-stepsPerRevolution/4);
+                delay(500);
+            }
             this->status = 1;
         }
         if (sta == -1)
         {
-            myStepper.step(-stepsPerRevolution/4);
-            delay(500);
-            myStepper.step(-stepsPerRevolution/4);
-            delay(500);
+            for (int i = 1;i <= half_circle_num; i++)
+            {
+                myStepper.step(stepsPerRevolution/4);
+                delay(500);
+                myStepper.step(stepsPerRevolution/4);
+                delay(500);
+            }
             this->status = -1;
         }
         led.set_all(las);
