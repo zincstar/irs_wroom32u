@@ -12,6 +12,7 @@
 #include "WeatherNow.h"
 #include <WebServer.h>
 #include <ESP_Mail_Client.h>
+#include "time.h"
 
 #define null -999
 #define SMTP_HOST "smtp.163.com"
@@ -39,7 +40,6 @@ SMTPSession smtp;
 WebServer server(80);
 void smtpCallback(SMTP_Status status);
 void ESP_Send_Email(int id);
-
 #define PWM_FREQ 32000
 #define PWM_RESOLUTION 8
 int _adc = 0;
@@ -369,6 +369,11 @@ String myhtmlPage =
     "            xmlhttp.open(\"GET\", \"EmailReport\", true); " +
     "            xmlhttp.send();" +
     "        }" +
+    "        function SetClothesTime() {" +
+    "            var xmlhttp = new XMLHttpRequest();" +
+    "            xmlhttp.open(\"GET\", \"SetClothesTime\", true); " +
+    "            xmlhttp.send();" +
+    "        }" +
     "    </script>" +
     "    <link rel=\"icon\" href=\"https://www.buaa.edu.cn/favicon.ico\">" +
     "    <style>html { font-family: Helvetica; display: inline-block; margin: 0px auto; text-align: center;}" +
@@ -390,19 +395,23 @@ String myhtmlPage =
     "    <input type=\"button\" class=\"button button1\" value=\"Switch\" onclick=\"SwitchMotor()\"></div>" +
     "    <h2>Email Report</h2>" +
     "    <input type=\"button\" class=\"button button1\" value=\"Send\" onclick=\"EmailReport()\"></div>" +
+    "    <h2>Clothes Timer Set</h2>" +
+    "    <input type=\"button\" class=\"button button1\" value=\"Set\" onclick=\"SetClothesTime()\"></div>" +
     "    <table width=\"100%\" border=\"0\" cellspacing=\"1\" cellpadding=\"4\" bgcolor=\"#cccccc\" align=\"center\">" +
     "        <caption><font size=\"7\">Monitor Status</font></caption>" +
     "        <tr><th class=\"titfont\">Monitor Name</th><th class=\"titfont\">Value</th></tr>" +
-    "        <tr><td class=\"cellfont1\">Temperature</td><td class=\"cellfont2\"><div id=\"SensorData1\">Unknown</div></td></tr>" +
-    "        <tr><td class=\"cellfont1\">Humidity</td><td class=\"cellfont2\"><div id=\"SensorData2\">Unknown</div></td></tr>" +
-    "        <tr><td class=\"cellfont1\">Pressure</td><td class=\"cellfont2\"><div id=\"SensorData3\">Unknown</div></td></tr>" +
-    "        <tr><td class=\"cellfont1\">Weather</td><td class=\"cellfont2\"><div id=\"SensorData4\">Unknown</div></td></tr>" +
-    "        <tr><td class=\"cellfont1\">Water</td><td class=\"cellfont2\"><div id=\"SensorData5\">Unknown</div></td></tr>" +
+    "        <tr><td class=\"cellfont1\">Temperature</td><td class=\"cellfont2\"><div id=\"SensorData1\">" + (String)temperature_humidity_sensor.t + "</div></td></tr>" +
+    "        <tr><td class=\"cellfont1\">Humidity</td><td class=\"cellfont2\"><div id=\"SensorData2\">" + (String)temperature_humidity_sensor.h + "</div></td></tr>" +
+    "        <tr><td class=\"cellfont1\">Pressure</td><td class=\"cellfont2\"><div id=\"SensorData3\">" + (String)pressure_sensor.pressure + "</div></td></tr>" +
+    "        <tr><td class=\"cellfont1\">Weather</td><td class=\"cellfont2\"><div id=\"SensorData4\">" + weatherNow.getWeatherText() + "</div></td></tr>" +
+    "        <tr><td class=\"cellfont1\">Water</td><td class=\"cellfont2\"><div id=\"SensorData5\">" + (String)waterdrop_sensor.quantity + "</div></td></tr>" +
     "    </table>" +
     "</body>" +
     "</html>";
 
 const char* appassword = "123456789";
+struct tm Clothes_end_time, Clothes_start_time;
+bool Have_clothes = 0;
 void Wifi_Connect()
 {
     Serial.printf("\n\nConnecting to %s", ssid);
@@ -643,13 +652,23 @@ void ESP_Send_Email(int id) // 1->Warning 2->Report
         message.subject = "Notice - It's raining now";
         htmlMsg += "<div style=\"color:#2f4468;\"><h1>ESP32 platform has monitored that it is raining now, and your canopy has automatically stretched.</h1>";
     }
-    htmlMsg += "<div style=\"color:#2f4468;\"><h2>Monitors Report</h2><table>";
-    htmlMsg += "<tr><td style=\"color:#255e95;\"><b>Temperature</b></td><td>" + (String)(temperature_humidity_sensor.t) + "</td></tr>";
-    htmlMsg += "<tr><td style=\"color:#255e95;\"><b>Humidity</b></td><td>" + (String)(temperature_humidity_sensor.h) + "</td></tr>";
-    htmlMsg += "<tr><td style=\"color:#255e95;\"><b>Pressure</b></td><td>" + (String)(pressure_sensor.pressure) + "</td></tr>";
-    htmlMsg += "<tr><td style=\"color:#255e95;\"><b>Weather</b></td><td>" + weatherNow.getWeatherText() + "</td></tr>";
-    htmlMsg += "<tr><td style=\"color:#255e95;\"><b>Water</b></td><td>" + (String)(waterdrop_sensor.quantity) + "</td></tr>";
-    
+    if(id == 1 || id == 2)
+    {
+        htmlMsg += "<div style=\"color:#2f4468;\"><h2>Monitors Report</h2><table>";
+        htmlMsg += "<tr><td style=\"color:#255e95;\"><b>Temperature</b></td><td>" + (String)(temperature_humidity_sensor.t) + "</td></tr>";
+        htmlMsg += "<tr><td style=\"color:#255e95;\"><b>Humidity</b></td><td>" + (String)(temperature_humidity_sensor.h) + "</td></tr>";
+        htmlMsg += "<tr><td style=\"color:#255e95;\"><b>Pressure</b></td><td>" + (String)(pressure_sensor.pressure) + "</td></tr>";
+        htmlMsg += "<tr><td style=\"color:#255e95;\"><b>Weather</b></td><td>" + weatherNow.getWeatherText() + "</td></tr>";
+        htmlMsg += "<tr><td style=\"color:#255e95;\"><b>Water</b></td><td>" + (String)(waterdrop_sensor.quantity) + "</td></tr>";
+    }
+    if(id == 3)
+    {
+        message.subject = "Notice - You can pick your clothes now.";
+        tm time_now;
+        getLocalTime(&time_now);
+        htmlMsg += "<div style=\"color:#2f4468;\"><h1>Your clothes have been exposed for " + (String)((double)(difftime(mktime(&time_now),mktime(&Clothes_start_time)))/3600) + " h, and you can pick them now.</h1>";
+    }
+
     htmlMsg += "</table><p>- Sent from ESP32 board</p></div>";
     message.html.content = htmlMsg.c_str();
     message.text.charSet = "us-ascii";
@@ -690,6 +709,64 @@ void smtpCallback(SMTP_Status status){
     }
     Serial.println("----------------\n");
   }
+}
+
+void setTimezone(String timezone){
+  Serial.printf("  Setting Timezone to %s\n",timezone.c_str());
+  setenv("TZ",timezone.c_str(),1);  //  Now adjust the TZ.  Clock settings are adjusted to show the new local time
+  tzset();
+}
+
+void initTime(String timezone){
+  struct tm timeinfo;
+
+  Serial.println("Setting up time");
+  configTime(0, 0, "pool.ntp.org");    // First connect to NTP server, with 0 TZ offset
+  if(!getLocalTime(&timeinfo)){
+    Serial.println("  Failed to obtain time");
+    return;
+  }
+  Serial.println("  Got the time from NTP");
+  // Now we can set the real timezone
+  setTimezone(timezone);
+}
+
+void printLocalTime(){
+  struct tm timeinfo;
+  if(!getLocalTime(&timeinfo)){
+    Serial.println("Failed to obtain time 1");
+    return;
+  }
+  Serial.println(&timeinfo, "%A, %B %d %Y %H:%M:%S zone %Z %z ");
+}
+
+void setTime(int yr, int month, int mday, int hr, int minute, int sec, int isDst){
+  struct tm tm;
+
+  tm.tm_year = yr - 1900;   // Set date
+  tm.tm_mon = month-1;
+  tm.tm_mday = mday;
+  tm.tm_hour = hr;      // Set time
+  tm.tm_min = minute;
+  tm.tm_sec = sec;
+  tm.tm_isdst = isDst;  // 1 or 0
+  time_t t = mktime(&tm);
+  Serial.printf("Setting time: %s", asctime(&tm));
+  struct timeval now = { .tv_sec = t };
+  settimeofday(&now, NULL);
+}
+
+void check_clothes()
+{
+    if(!Have_clothes) return;
+    tm time_now;
+    getLocalTime(&time_now);
+    // if(difftime(mktime(&Clothes_end_time),mktime(&Clothes_start_time)) >= 3600 * 24 * 2)
+    if(difftime(mktime(&time_now),mktime(&Clothes_start_time)) >= 60)
+    {
+        ESP_Send_Email(3);
+        Have_clothes = 0;
+    }
 }
 
 void handleRoot() //回调函数
@@ -733,6 +810,15 @@ void handleEmail() //回调函数
     server.send(200, "application/json", jresp);
 }
 
+void handleClothesTime()
+{
+    Have_clothes = 1;
+    getLocalTime(&Clothes_start_time);
+    // Clothes_end_time = Clothes_start_time + ;
+    String jresp = "{}";
+    server.send(200, "application/json", jresp);
+}
+
 void Task1code(void *pvParameters)
 {
     for (;;)
@@ -762,14 +848,22 @@ void Task2code(void *pvParameters)
     server.on("/SwitchLED", HTTP_GET, handleLED); //注册网页中ajax发送的get方法的请求和回调函数
     server.on("/SwitchMotor", HTTP_GET, handleMotor); //注册网页中ajax发送的get方法的请求和回调函数
     server.on("/EmailReport", HTTP_GET, handleEmail); //注册网页中ajax发送的get方法的请求和回调函数
+    server.on("/SetClothesTime", HTTP_GET, handleClothesTime); //注册网页中ajax发送的get方法的请求和回调函数
     server.begin();
     weatherNow.config(reqUserKey, reqLocation, reqUnit);
+    initTime("<-08>8");
+    // printLocalTime();
     for (;;)
     {
+        // printLocalTime();
         Wifi_Check();
         if (WiFi.status() == WL_CONNECTED)
         {
             get_weather_api();
+            if(Have_clothes)
+            {
+                check_clothes();
+            }
             server.handleClient();
             // Web_Server_Monitor();
         }
