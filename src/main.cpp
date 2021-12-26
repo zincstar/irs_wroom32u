@@ -699,9 +699,9 @@ void handleRoot() //回调函数
 
 void handleData() //回调函数
 {
-    String var1 = (String)(temperature_humidity_sensor.t);
-    String var2 = (String)(temperature_humidity_sensor.h);
-    String var3 = (String)(pressure_sensor.pressure);
+    String var1 = (String)(temperature_humidity_sensor.t) + "°C";
+    String var2 = (String)(temperature_humidity_sensor.h) + "%RH";
+    String var3 = (String)(pressure_sensor.pressure) + "hPa";
     String var4 = weatherNow.getWeatherText();
     String var5 = (String)(waterdrop_sensor.quantity);
     String jresp = "{\"var1\":\"" + var1 + "\",\"var2\":\"" + var2 + "\",\"var3\":\"" + var3 + "\",\"var4\":\"" + var4 + "\",\"var5\":\"" + var5 + "\"}";
