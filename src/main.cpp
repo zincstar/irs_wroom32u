@@ -204,7 +204,7 @@ public:
 };
 Led led;
 
-const int half_circle_num = 15;
+const int half_circle_num = 10;
 const int stepsPerRevolution = 2048;
 Stepper myStepper(stepsPerRevolution, 19, 5, 18, 17);
 class Motor
