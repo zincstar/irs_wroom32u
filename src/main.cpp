@@ -18,14 +18,14 @@
 #define SMTP_HOST "smtp.163.com"
 #define SMTP_PORT 465
 /* The sign in credentials */
-#define AUTHOR_EMAIL "esp32_station@163.com"
+#define AUTHOR_EMAIL "xxxxxxx@163.com"
 #define AUTHOR_PASSWORD "CJIVAETSOCRBUQCM"
 
 /* Recipient's email*/
-#define RECIPIENT_EMAIL "pidtlsj@qq.com"
+#define RECIPIENT_EMAIL "admin@qq.com"
 const char *ssid = "wifi";                      // Wifi name
 const char *password = "23332333qwq";           // Wifi password
-const char* reqUserKey = "SLrCCb-7P3THqEagb";   // 心知天气api私钥
+const char* reqUserKey = "xxxxxxxxxxxxx";   // 心知天气api私钥
 const char* reqLocation = "39.98:116.35";            // 城市，可使用"ip"自动识别请求 IP 地址
 const char* reqUnit = "c";                      // 摄氏(c)/华氏(f)
 int LEDState1=1;                               // LED灯的开关状态
